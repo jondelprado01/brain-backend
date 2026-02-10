@@ -651,15 +651,15 @@
         $change_log = [];
 
         foreach ($data as $key => $dt) {
-            if ($dt[8] != 'null' && isset($dt[9])) {
+            if (isset($dt[10]) && $dt[10] != 'null' && isset($dt[9]) && $dt[9] != "ADD") {
                 // $query_edit = 'UPDATE TEST.ADI_HW_OVERRIDE_TYPE_2 SET HW_NM = "'.strtoupper($dt[0]).'", EFF_START = "'.$dt[1].'", EFF_END = "'.$dt[2].'", OVERRIDE_CAP = "'.$dt[3].'", UPDATED_AT = "'.$curdate.'" WHERE ID = '.$dt[6].'';
                 // $result = ExecuteIQuery($query_edit,$iConRLM);
                 if ($dt[9] == 'UPDATE') {
-                    array_push($values_edit_id, $dt[8]);
-                    array_push($values_edit['EFF_START'],    'WHEN '.$dt[8].' THEN "'.$dt[1].'"');
-                    array_push($values_edit['EFF_END'],      'WHEN '.$dt[8].' THEN "'.$dt[2].'"');
-                    array_push($values_edit['OVERRIDE_CAP'], 'WHEN '.$dt[8].' THEN "'.$dt[3].'"');
-                    array_push($values_edit['UPDATED_AT'],   'WHEN '.$dt[8].' THEN "'.$curdate.'"');
+                    array_push($values_edit_id, $dt[10]);
+                    array_push($values_edit['EFF_START'],    'WHEN '.$dt[10].' THEN "'.$dt[1].'"');
+                    array_push($values_edit['EFF_END'],      'WHEN '.$dt[10].' THEN "'.$dt[2].'"');
+                    array_push($values_edit['OVERRIDE_CAP'], 'WHEN '.$dt[10].' THEN "'.$dt[3].'"');
+                    array_push($values_edit['UPDATED_AT'],   'WHEN '.$dt[10].' THEN "'.$curdate.'"');
                 }
                 else{
                     // array_push($values_delete_id, $dt[6]);
@@ -673,6 +673,7 @@
                 $get_id_res = ExecuteIQuery($get_id, $iConRLM);
 
                 while($row = mysqli_fetch_assoc($get_id_res)){
+                    unset($dt[9], $dt[10]);
                     $dt[] = $row['LAST_INSERT_ID()'];
                     array_push($change_log, $dt);
                 }
