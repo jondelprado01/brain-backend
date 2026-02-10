@@ -26,6 +26,7 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module){
     $new_data   = [];
 
     $is_multiple = false;
+    $multiple_data = [];
 
     $iden_query = "";
     $info_query = "";
@@ -80,24 +81,52 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module){
             $iden_data  = $payload;
             $is_multiple = true;
         }
-        elseif (strpos($module, "plan non-board") !== false){
+        elseif (strpos($module, "capacity override") !== false){
+            if (strpos($module, "delete") !== false) {
+               
+            }
+            else{
+                //ADD ONLY
+                $iden_payload = [];
+                $iden_field = ["HW_NAME", "HMS_COUNT", "HW_TYPE", "SITE_NUM", "RES_AREA", "ID"];
 
+                $iden_payload = array_map(function ($row) {
+                    unset($row[1], $row[2], $row[3], $row[6]);
+                    return array_values($row);
+                }, $payload);
+
+                $iden_data  = $iden_payload;
+                $is_multiple = true;
+
+                $info_payload = [];
+                $info_field = ["FYWW_START", "FYWW_END", "OVERRIDE_CAP", "ID"];
+
+                $info_payload = array_map(function ($row) {
+                    unset($row[0], $row[4], $row[5], $row[6], $row[7], $row[8]);
+                    return array_values($row);
+                }, $payload);
+
+                foreach ($info_payload as $key => $info) {
+                    array_push($multiple_data, [
+                        "old_data_arr" => [],
+                        "new_data_arr" => $info
+                    ]);
+                }
+            }
         }
     }
-
 
     $iden_query = CONSTRUCT_IDEN_QUERY($change_id, $iden_field, $iden_data, $is_multiple);
 
     if (count($info_field) > 0) {
-        $info_query = CONSTRUCT_INFO_QUERY($change_id, $info_field, $old_data, $new_data);
+        $info_query = CONSTRUCT_INFO_QUERY($change_id, $info_field, $old_data, $new_data, $is_multiple, $multiple_data);
     }
-
 
     //CHANGE IDEN TABLE
     $insert_iden = 'INSERT INTO BRAIN.CHANGE_IDEN VALUES '.$iden_query.'';
     $insert_iden_res = ExecuteIQuery($insert_iden,$iConRLM);
 
-    //CHANGE IDEN TABLE
+    //CHANGE INFO TABLE
     if ($info_query != "") {
         $insert_info = 'INSERT INTO BRAIN.CHANGE_INFO VALUES '.$info_query.'';
         $insert_info_res = ExecuteIQuery($insert_info,$iConRLM);
@@ -134,23 +163,38 @@ function CONSTRUCT_IDEN_QUERY($change_id, $field, $data, $is_multiple){
     return $query;
 }
 
-function CONSTRUCT_INFO_QUERY($change_id, $field, $old_data, $new_data){
+function CONSTRUCT_INFO_QUERY($change_id, $field, $old_data, $new_data, $is_multiple, $multiple_data = []){
 
     $query = "";
     $field_len = count($field);
     $count = 1;
 
-    foreach ($field as $key => $fld) {
+    if ($is_multiple) {
+        if (count($multiple_data) > 0) {
+            foreach ($multiple_data as $mkey => $multi) {
+                foreach ($field as $key => $fld) {
+                    $old_val = (count($multi['old_data_arr']) > 0) ? $multi['old_data_arr'][$key] : '';
+                    $new_val = $multi['new_data_arr'][$key];
 
-        $old_val = $old_data[$key];
-        $new_val = $new_data[$key];
-
-        $delimiter = "";
-        if ($count < $field_len) {
-            $delimiter = ",";
+                    $query .= '("", "'.$change_id.'", "'.$fld.'", "'.$old_val.'", "'.$new_val.'"),';
+                }
+            }
+            $query = substr_replace($query, "", -1);
         }
-        $query .= '("", "'.$change_id.'", "'.$fld.'", "'.$old_val.'", "'.$new_val.'")'.$delimiter;
-        $count++;
+    }
+    else{
+        foreach ($field as $key => $fld) {
+    
+            $old_val = $old_data[$key];
+            $new_val = $new_data[$key];
+    
+            $delimiter = "";
+            if ($count < $field_len) {
+                $delimiter = ",";
+            }
+            $query .= '("", "'.$change_id.'", "'.$fld.'", "'.$old_val.'", "'.$new_val.'")'.$delimiter;
+            $count++;
+        }
     }
 
     return $query;
