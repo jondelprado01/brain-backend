@@ -12,11 +12,13 @@ date_default_timezone_set('Asia/Manila');
 
 $iConRLM = Open_ILink("localhost");
 
-print_r(json_encode(ADD_LOG($iConRLM, $_POST['payload'], $_POST['user_details'], $_POST['module'])));
+$old_data_payload = isset($_POST['old_data']) ? $_POST['old_data'] : [];
+
+print_r(json_encode(ADD_LOG($iConRLM, $_POST['payload'], $_POST['user_details'], $_POST['module'], $old_data_payload)));
 
 mysqli_close($iConRLM);
 
-function ADD_LOG($iConRLM, $payload, $user_details, $module){
+function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
 
     $change_id  = "";
     $iden_field = [];
@@ -99,7 +101,7 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module){
                 $is_multiple = true;
 
                 $info_payload = [];
-                $info_field = ["FYWW_START", "FYWW_END", "OVERRIDE_CAP", "ID"];
+                $info_field = ["EFF_START", "EFF_END", "OVERRIDE_CAP", "ID"];
 
                 $info_payload = array_map(function ($row) {
                     unset($row[0], $row[4], $row[5], $row[6], $row[7], $row[8]);
@@ -108,7 +110,7 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module){
 
                 foreach ($info_payload as $key => $info) {
                     array_push($multiple_data, [
-                        "old_data_arr" => [],
+                        "old_data_arr" => $old_data_payload[$key],
                         "new_data_arr" => $info
                     ]);
                 }

@@ -649,20 +649,22 @@
         $values_delete_id = [];
         $result = '';
         $change_log = [];
+        $to_edit_id = [];
+        $old_data = [];
 
         foreach ($data as $key => $dt) {
             if (isset($dt[10]) && $dt[10] != 'null' && isset($dt[9]) && $dt[9] != "ADD") {
-                // $query_edit = 'UPDATE TEST.ADI_HW_OVERRIDE_TYPE_2 SET HW_NM = "'.strtoupper($dt[0]).'", EFF_START = "'.$dt[1].'", EFF_END = "'.$dt[2].'", OVERRIDE_CAP = "'.$dt[3].'", UPDATED_AT = "'.$curdate.'" WHERE ID = '.$dt[6].'';
-                // $result = ExecuteIQuery($query_edit,$iConRLM);
                 if ($dt[9] == 'UPDATE') {
                     array_push($values_edit_id, $dt[10]);
                     array_push($values_edit['EFF_START'],    'WHEN '.$dt[10].' THEN "'.$dt[1].'"');
                     array_push($values_edit['EFF_END'],      'WHEN '.$dt[10].' THEN "'.$dt[2].'"');
                     array_push($values_edit['OVERRIDE_CAP'], 'WHEN '.$dt[10].' THEN "'.$dt[3].'"');
                     array_push($values_edit['UPDATED_AT'],   'WHEN '.$dt[10].' THEN "'.$curdate.'"');
-                }
-                else{
-                    // array_push($values_delete_id, $dt[6]);
+
+                    $dt[6] = $dt[9];
+                    unset($dt[9]);
+                    array_push($change_log, $dt);
+                    array_push($to_edit_id, $dt[10]);
                 }
             }
             else{
@@ -677,12 +679,18 @@
                     $dt[] = $row['LAST_INSERT_ID()'];
                     array_push($change_log, $dt);
                 }
-
-                // array_push($values, '("", "'.strtoupper($dt[0]).'", "'.$dt[1].'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[4].'", "'.$dt[5].'", "'.$dt[7].'", "'.$dt[8].'", "'.$curdate.'", "'.$user['emp_name'].'", "")');
             }
         }
 
         if (count($values_edit_id) > 0) {
+
+            //GET OLD/PREVIOUS DATA BEFORE UPDATING DATASET - CHANGE LOG FEATURE (APPLICABLE FOR CSV MASS UPLOAD)
+            $get_old_data = 'SELECT EFF_START, EFF_END, OVERRIDE_CAP, ID FROM TEST.ADI_HW_OVERRIDE_TYPE_2 WHERE ID IN ("'.implode('","', $to_edit_id).'")';
+            $get_old_data_res = ExecuteIQuery($get_old_data,$iConRLM);
+            while($row = mysqli_fetch_assoc($get_old_data_res)){
+                array_push($old_data, [$row['EFF_START'], $row['EFF_END'], $row['OVERRIDE_CAP'], $row['ID']]);
+            }
+
             $batch_update = 'UPDATE TEST.ADI_HW_OVERRIDE_TYPE_2
                             SET 
                                 EFF_START = CASE ID
@@ -702,18 +710,10 @@
             $result = ExecuteIQuery($batch_update,$iConRLM);
         }
         
-        
-        // if (count($values) > 0) {
-        //     $query = 'INSERT INTO TEST.ADI_HW_OVERRIDE_TYPE_2 VALUES '.implode(",", $values).'';
-        //     $result = ExecuteIQuery($query,$iConRLM);
-            
-        //     $get_id = 'SELECT LAST_INSERT_ID()';
-        //     $get_id_res = ExecuteIQuery($get_id, $iConRLM);
-        // }
-        
         return [
             "STATUS" => $result,
-            "CHANGE_LOG_DATA" => $change_log
+            "CHANGE_LOG_DATA" => $change_log,
+            "OLD_DATA" => $old_data
         ];
     }
 
