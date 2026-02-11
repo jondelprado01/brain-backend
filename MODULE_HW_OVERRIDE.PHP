@@ -723,7 +723,8 @@
         $result = ExecuteIQuery($query,$iConRLM);
         return $result;
     }
-
+    
+    //TO BE DEPRECATED
     function EDIT_HW_CAPACITY($iConRLM, $data, $user){
         $curdate = date('Y-m-d H:i:s');
         $query = 'UPDATE TEST.ADI_HW_OVERRIDE_TYPE_2 SET EFF_START = "'.$data[3].'", EFF_END = "'.$data[4].'", OVERRIDE_CAP = "'.$data[2].'", UPDATED_AT = "'.$curdate.'" WHERE ID = '.$data[0].'';

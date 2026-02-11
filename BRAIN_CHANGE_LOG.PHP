@@ -110,7 +110,7 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
 
                 foreach ($info_payload as $key => $info) {
                     array_push($multiple_data, [
-                        "old_data_arr" => $old_data_payload[$key],
+                        "old_data_arr" => (count($old_data_payload) > 0) ? $old_data_payload[$key] : [],
                         "new_data_arr" => $info
                     ]);
                 }
