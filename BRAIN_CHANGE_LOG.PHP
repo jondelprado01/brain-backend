@@ -84,36 +84,31 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
             $is_multiple = true;
         }
         elseif (strpos($module, "capacity override") !== false){
-            if (strpos($module, "delete") !== false) {
-               
-            }
-            else{
-                //ADD ONLY
-                $iden_payload = [];
-                $iden_field = ["HW_NAME", "HMS_COUNT", "HW_TYPE", "SITE_NUM", "RES_AREA", "ID"];
+            //ADD, UPDATE, DELETE (CSV PROCESS TYPE INCLUDED)
+            $iden_payload = [];
+            $iden_field = ["HW_NAME", "HMS_COUNT", "HW_TYPE", "SITE_NUM", "RES_AREA", "ID"];
 
-                $iden_payload = array_map(function ($row) {
-                    unset($row[1], $row[2], $row[3], $row[6]);
-                    return array_values($row);
-                }, $payload);
+            $iden_payload = array_map(function ($row) {
+                unset($row[1], $row[2], $row[3], $row[6]);
+                return array_values($row);
+            }, $payload);
 
-                $iden_data  = $iden_payload;
-                $is_multiple = true;
+            $iden_data  = $iden_payload;
+            $is_multiple = true;
 
-                $info_payload = [];
-                $info_field = ["EFF_START", "EFF_END", "OVERRIDE_CAP", "ID"];
+            $info_payload = [];
+            $info_field = ["EFF_START", "EFF_END", "OVERRIDE_CAP", "ID"];
 
-                $info_payload = array_map(function ($row) {
-                    unset($row[0], $row[4], $row[5], $row[6], $row[7], $row[8]);
-                    return array_values($row);
-                }, $payload);
+            $info_payload = array_map(function ($row) {
+                unset($row[0], $row[4], $row[5], $row[6], $row[7], $row[8]);
+                return array_values($row);
+            }, $payload);
 
-                foreach ($info_payload as $key => $info) {
-                    array_push($multiple_data, [
-                        "old_data_arr" => (count($old_data_payload) > 0) ? $old_data_payload[$key] : [],
-                        "new_data_arr" => $info
-                    ]);
-                }
+            foreach ($info_payload as $key => $info) {
+                array_push($multiple_data, [
+                    "old_data_arr" => (count($old_data_payload) > 0) ? $old_data_payload[$key] : [],
+                    "new_data_arr" => (strpos($module, "delete")) ? [] : $info
+                ]);
             }
         }
     }
@@ -176,7 +171,7 @@ function CONSTRUCT_INFO_QUERY($change_id, $field, $old_data, $new_data, $is_mult
             foreach ($multiple_data as $mkey => $multi) {
                 foreach ($field as $key => $fld) {
                     $old_val = (count($multi['old_data_arr']) > 0) ? $multi['old_data_arr'][$key] : '';
-                    $new_val = $multi['new_data_arr'][$key];
+                    $new_val = (count($multi['new_data_arr']) > 0) ? $multi['new_data_arr'][$key] : '';
 
                     $query .= '("", "'.$change_id.'", "'.$fld.'", "'.$old_val.'", "'.$new_val.'"),';
                 }

@@ -684,7 +684,7 @@
 
         if (count($values_edit_id) > 0) {
 
-            //GET OLD/PREVIOUS DATA BEFORE UPDATING DATASET - CHANGE LOG FEATURE (APPLICABLE FOR CSV MASS UPLOAD)
+            //GET OLD/PREVIOUS DATA BEFORE UPDATING DATASET - CHANGE LOG FEATURE
             $get_old_data = 'SELECT EFF_START, EFF_END, OVERRIDE_CAP, ID FROM TEST.ADI_HW_OVERRIDE_TYPE_2 WHERE ID IN ("'.implode('","', $to_edit_id).'")';
             $get_old_data_res = ExecuteIQuery($get_old_data,$iConRLM);
             while($row = mysqli_fetch_assoc($get_old_data_res)){
@@ -724,7 +724,7 @@
         return $result;
     }
     
-    //TO BE DEPRECATED
+    //TO BE DEPRECATED - 02/11/2026
     function EDIT_HW_CAPACITY($iConRLM, $data, $user){
         $curdate = date('Y-m-d H:i:s');
         $query = 'UPDATE TEST.ADI_HW_OVERRIDE_TYPE_2 SET EFF_START = "'.$data[3].'", EFF_END = "'.$data[4].'", OVERRIDE_CAP = "'.$data[2].'", UPDATED_AT = "'.$curdate.'" WHERE ID = '.$data[0].'';
@@ -752,6 +752,8 @@
 
     function DELETE_HW_CAPACITY($iConRLM, $data, $is_csv){
         $ids = [];
+        $change_log = [];
+        $old_data = [];
         $curdate = date('Y-m-d H:i:s');
         
         if ($is_csv) {
@@ -763,9 +765,41 @@
             }
         }
 
-        $query = 'DELETE FROM  TEST.ADI_HW_OVERRIDE_TYPE_2 WHERE ID IN ("'.implode('","', $ids).'")';
+        //GET OLD/PREVIOUS DATA BEFORE DELETING DATASET - CHANGE LOG FEATURE
+        if (!isset($data[0]['ID'])) {
+            $get_old_data = 'SELECT * FROM TEST.ADI_HW_OVERRIDE_TYPE_2 WHERE ID IN ("'.implode('","', $ids).'")';
+            $get_old_data_res = ExecuteIQuery($get_old_data,$iConRLM);
+            while($row = mysqli_fetch_assoc($get_old_data_res)){
+                array_push($change_log, $row);
+                array_push($old_data, [$row['EFF_START'], $row['EFF_END'], $row['OVERRIDE_CAP'], $row['ID']]);
+            }
+        }
+        else{
+            foreach ($data as $key => $dt) {
+                array_push($change_log, [
+                    $dt['HW_NM'],
+                    $dt['EFF_START'],
+                    $dt['EFF_END'],
+                    $dt['OVERRIDE_CAP'],
+                    $dt['CURRENT_CAP'],
+                    $dt['HW_TYPE'],
+                    $dt['HW_NM'],
+                    $dt['SITE_NUM'],
+                    $dt['RES_AREA'],
+                    $dt['ID']
+                ]);
+                array_push($old_data, [$dt['EFF_START'], $dt['EFF_END'], $dt['OVERRIDE_CAP'], $dt['ID']]);
+            }
+        }
+
+        $query = 'DELETE FROM TEST.ADI_HW_OVERRIDE_TYPE_2 WHERE ID IN ("'.implode('","', $ids).'")';
         $result = ExecuteIQuery($query,$iConRLM);
-        return $result;
+
+        return [
+            "STATUS" => $result,
+            "CHANGE_LOG_DATA" => $change_log,
+            "OLD_DATA" => $old_data
+        ];
     }
 
     function ADD_NON_BOARD($iConRLM, $data, $user){
