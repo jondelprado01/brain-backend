@@ -805,15 +805,29 @@
     function ADD_NON_BOARD($iConRLM, $data, $user){
         $curdate = date('Y-m-d H:i:s');
         $values = [];
-        $result = '';
-        foreach ($data as $key => $dt) {
-            array_push($values, '("", "'.$dt[0].'", "'.$dt[1].'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[4].'", "'.(double)$dt[5].'", "'.$curdate.'", "'.$user['emp_name'].'")');
+        $change_log = [];
+        $result = ''; 
+
+        if (count($data) > 0) {
+            foreach ($data as $key => $dt) {
+
+                $query = 'INSERT INTO TEST.ADI_HW_OVERRIDE_TYPE_3 VALUES ("", "'.$dt[0].'", "'.$dt[1].'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[4].'", "'.(double)$dt[5].'", "'.$curdate.'", "'.$user['emp_name'].'")';
+                $result = ExecuteIQuery($query,$iConRLM);
+
+                $get_id = 'SELECT LAST_INSERT_ID()';
+                $get_id_res = ExecuteIQuery($get_id, $iConRLM);
+
+                while($row = mysqli_fetch_assoc($get_id_res)){
+                    $dt[] = $row['LAST_INSERT_ID()'];
+                    array_push($change_log, $dt);
+                }
+            }
         }
-        if (count($values) > 0) {
-            $query = 'INSERT INTO TEST.ADI_HW_OVERRIDE_TYPE_3 VALUES '.implode(",", $values).'';
-            $result = ExecuteIQuery($query,$iConRLM);
-        }
-        return $result;
+
+        return [
+            "STATUS" => $result,
+            "CHANGE_LOG_DATA" => $change_log
+        ];
     }
 
     function DELETE_NON_BOARD($iConRLM, $data){
@@ -824,7 +838,7 @@
         }
         $query = 'DELETE FROM  TEST.ADI_HW_OVERRIDE_TYPE_3 WHERE ID IN ("'.implode('","', $ids).'")';
         $result = ExecuteIQuery($query,$iConRLM);
-        return $result;
+        return ["STATUS" => $result];
     }
 
     function GET_WEEKS($iConRLM){

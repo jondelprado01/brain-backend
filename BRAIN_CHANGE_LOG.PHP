@@ -44,7 +44,7 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
         $change_id = $row['LAST_INSERT_ID()'];
     }
     
-    //TIMEPHASED MODULE
+    //PLANNING ASSUMPTIONS - TIMEPHASED MODULE
     if(strpos($module, "time-phased instance") !== false){
         if (strpos($module, "deleted") !== false) {
             $pld_len = count($payload[0]);
@@ -69,6 +69,7 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
             $new_data   = [$payload['data']['date'], $payload['data']['notes'], $payload['data']['num'], implode(",", $payload['data']['process']), $payload['data']['week']];
         }
     }
+    //DEFAULT ATOM MODULE
     elseif ($module == "assign default atom") {
         $iden_field = ["ATOM_ID", "TYPE", "SITE", "ENG_NAME"];
         $iden_data  = [$payload['data']['atom_id'], $payload['data']['type'], $payload['data']['site'], $payload['data']['eng_name']];
@@ -77,12 +78,17 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
         $old_data   = [$payload['old_data']['old_atom_name'], $payload['old_data']['old_res_area']];
         $new_data   = [$payload['data']['atom_name'], $payload['data']['res_area']];
     }
+    //HW OVERRIDE MODULE
     elseif (strpos($module, "hw-override") !== false) {
+
+        //PLAN NON-BOARD - TYPE 3
         if (strpos($module, "plan non-board") !== false) {
-            $iden_field = ["SITE_NUM", "RES_AREA", "HW_TYPE_HMS", "HW_TYPE_SUS", "HW_NAME", "HMS_COUNT"];
+            //ADD, DELETE
+            $iden_field = ["SITE_NUM", "RES_AREA", "HW_TYPE_HMS", "HW_TYPE_SUS", "HW_NAME", "HMS_COUNT", "ID"];
             $iden_data  = $payload;
             $is_multiple = true;
         }
+        //HW CAPACITY - TYPE 2
         elseif (strpos($module, "capacity override") !== false){
             //ADD, UPDATE, DELETE (CSV PROCESS TYPE INCLUDED)
             $iden_payload = [];
