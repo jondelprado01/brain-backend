@@ -579,13 +579,17 @@
         $values_edit_id = [];
         $values_delete_id = [];
         $result = '';
+        $change_log = [];
+        $to_edit_id = [];
+        $old_data = [];
+
         foreach ($data as $key => $dt) {
             if ($dt[6] != 'null') {
-                if (!isset($dt[10])) {
-                    $query_edit = 'UPDATE TEST.ADI_HW_OVERRIDE_TYPE_1 SET HW_NM = "'.strtoupper($dt[1]).'", EFF_START = "'.$dt[2].'", EFF_END = "'.$dt[3].'", CAPACITY = "'.$dt[4].'", UPDATED_AT = "'.$curdate.'" WHERE ID = '.$dt[6].'';
-                    $result = ExecuteIQuery($query_edit,$iConRLM);
-                }
-                else{
+                // if (!isset($dt[10])) {
+                //     $query_edit = 'UPDATE TEST.ADI_HW_OVERRIDE_TYPE_1 SET HW_NM = "'.strtoupper($dt[1]).'", EFF_START = "'.$dt[2].'", EFF_END = "'.$dt[3].'", CAPACITY = "'.$dt[4].'", UPDATED_AT = "'.$curdate.'" WHERE ID = '.$dt[6].'';
+                //     $result = ExecuteIQuery($query_edit,$iConRLM);
+                // }
+                // else{
                     if ($dt[10] == 'UPDATE') {
                         array_push($values_edit_id, $dt[6]);
                         array_push($values_edit['HW_NM'],       'WHEN '.$dt[6].' THEN "'.strtoupper($dt[1]).'"');
@@ -593,18 +597,39 @@
                         array_push($values_edit['EFF_END'],     'WHEN '.$dt[6].' THEN "'.$dt[3].'"');
                         array_push($values_edit['CAPACITY'],    'WHEN '.$dt[6].' THEN "'.$dt[4].'"');
                         array_push($values_edit['UPDATED_AT'],  'WHEN '.$dt[6].' THEN "'.$curdate.'"');
+
+                        array_push($change_log, $dt);
+                        array_push($to_edit_id, $dt[6]);
                     }
-                    else{
-                        array_push($values_delete_id, $dt[6]);
-                    }
-                }
+                    // else{
+                    //     array_push($values_delete_id, $dt[6]);
+                    // }
+                // }
             }
             else{
-                array_push($values, '("", "'.$dt[0].'", "'.strtoupper($dt[1]).'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[7].'", "'.$dt[8].'", "'.$dt[4].'", "'.$dt[5].'", "'.$curdate.'", "'.$user['emp_name'].'", "", "'.$dt[9].'")');
+                
+                $query = 'INSERT INTO TEST.ADI_HW_OVERRIDE_TYPE_1 VALUES ("", "'.$dt[0].'", "'.strtoupper($dt[1]).'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[7].'", "'.$dt[8].'", "'.$dt[4].'", "'.$dt[5].'", "'.$curdate.'", "'.$user['emp_name'].'", "", "'.$dt[9].'")';
+                $result = ExecuteIQuery($query,$iConRLM);
+
+                $get_id = 'SELECT LAST_INSERT_ID()';
+                $get_id_res = ExecuteIQuery($get_id, $iConRLM);
+
+                while($row = mysqli_fetch_assoc($get_id_res)){
+                    $dt[6] = $row['LAST_INSERT_ID()'];
+                    array_push($change_log, $dt);
+                }
             }
         }
 
         if (count($values_edit_id) > 0) {
+
+            //GET OLD/PREVIOUS DATA BEFORE UPDATING DATASET - CHANGE LOG FEATURE
+            $get_old_data = 'SELECT HW_NM, EFF_START, EFF_END, CAPACITY, ID FROM TEST.ADI_HW_OVERRIDE_TYPE_1 WHERE ID IN ("'.implode('","', $to_edit_id).'")';
+            $get_old_data_res = ExecuteIQuery($get_old_data,$iConRLM);
+            while($row = mysqli_fetch_assoc($get_old_data_res)){
+                array_push($old_data, [$row['HW_NM'], $row['EFF_START'], $row['EFF_END'], $row['CAPACITY'], $row['ID']]);
+            }
+
             $batch_update = 'UPDATE TEST.ADI_HW_OVERRIDE_TYPE_1
                             SET 
                                 HW_NM = CASE ID
@@ -626,19 +651,17 @@
             
             $result = ExecuteIQuery($batch_update,$iConRLM);
         }
-        
-        //FINISH VALIDATION, IF PROCESS TYPE IS DELETE OR UPDATE. ADJUST EMPTY CELL VALIDATION, MAKE IT VALID FOR SOME.
-        // AND ADJUST GENPOOL VALIDATION (OVERLAPPING WEEKS). IF UPDATE ADJUST SOME, IF DELETE DON'T RUN THROUGH IT.
-        // if (count($values_delete_id) > 0) {
-        //     $batch_delete = 'DELETE FROM  TEST.ADI_HW_OVERRIDE_TYPE_1 WHERE ID IN ("'.implode('","', $values_delete_id).'")';
-        //     $result = ExecuteIQuery($batch_delete,$iConRLM);
-        // }
 
-        if (count($values) > 0) {
-            $query = 'INSERT INTO TEST.ADI_HW_OVERRIDE_TYPE_1 VALUES '.implode(",", $values).'';
-            $result = ExecuteIQuery($query,$iConRLM);
-        }
-        return $result;
+        // if (count($values) > 0) {
+        //     $query = 'INSERT INTO TEST.ADI_HW_OVERRIDE_TYPE_1 VALUES '.implode(",", $values).'';
+        //     $result = ExecuteIQuery($query,$iConRLM);
+        // }
+        
+        return [
+            "STATUS" => $result,
+            "CHANGE_LOG_DATA" => $change_log,
+            "OLD_DATA" => $old_data
+        ];
     }
 
     function ADD_HW_CAPACITY($iConRLM, $data, $user){
@@ -716,7 +739,8 @@
             "OLD_DATA" => $old_data
         ];
     }
-
+    
+    //TO BE DEPRECATED - 02/18/2026
     function EDIT_DUMMY_HW($iConRLM, $data, $user){
         $curdate = date('Y-m-d H:i:s');
         $query = 'UPDATE TEST.ADI_HW_OVERRIDE_TYPE_1 SET HW_NM = "'.strtoupper($data[3]).'", EFF_START = "'.$data[4].'", EFF_END = "'.$data[5].'", CAPACITY = "'.$data[6].'", UPDATED_AT = "'.$curdate.'" WHERE ID = '.$data[0].'';
@@ -734,6 +758,8 @@
 
     function DELETE_DUMMY_HW($iConRLM, $data, $is_csv){
         $ids = [];
+        $change_log = [];
+        $old_data = [];
         $curdate = date('Y-m-d H:i:s');
 
         if ($is_csv) {
@@ -744,10 +770,55 @@
                 array_push($ids, $dt['ID']);
             }
         }
+        
+        //GET OLD/PREVIOUS DATA BEFORE DELETING DATASET - CHANGE LOG FEATURE
+        if (!isset($data[0]['ID'])) {
+            $get_old_data = 'SELECT * FROM TEST.ADI_HW_OVERRIDE_TYPE_1 WHERE ID IN ("'.implode('","', $ids).'")';
+            $get_old_data_res = ExecuteIQuery($get_old_data,$iConRLM);
+            while($row = mysqli_fetch_assoc($get_old_data_res)){
+                array_push($change_log, [
+                    $row['MFG_PART_NUM'],
+                    $row['HW_NM'],
+                    $row['EFF_START'],
+                    $row['EFF_END'],
+                    $row['CAPACITY'],
+                    $row['HW_TYPE'],
+                    $row['ID'],
+                    $row['GENPOOL'],
+                    $row['GENPOOL_CAPACITY'],
+                    $row['GP_HW_TYPE'],
+                    "DELETE"
+                ]);
+                array_push($old_data, [$row['HW_NM'], $row['EFF_START'], $row['EFF_END'], $row['CAPACITY'], $row['ID']]);
+            }
+        }
+        else{
+            foreach ($data as $key => $dt) {
+                array_push($change_log, [
+                    $dt['MFG_PART_NUM'],
+                    $dt['HW_NM'],
+                    $dt['EFF_START'],
+                    $dt['EFF_END'],
+                    $dt['CAPACITY'],
+                    $dt['HW_TYPE'],
+                    $dt['ID'],
+                    $dt['GENPOOL'],
+                    $dt['GENPOOL_CAPACITY'],
+                    $dt['GP_HW_TYPE'],
+                    "DELETE"
+                ]);
+                array_push($old_data, [$dt['HW_NM'], $dt['EFF_START'], $dt['EFF_END'], $dt['CAPACITY'], $dt['ID']]);
+            }
+        }
 
         $query = 'DELETE FROM  TEST.ADI_HW_OVERRIDE_TYPE_1 WHERE ID IN ("'.implode('","', $ids).'")';
         $result = ExecuteIQuery($query,$iConRLM);
-        return $result;
+
+        return [
+            "STATUS" => $result,
+            "CHANGE_LOG_DATA" => $change_log,
+            "OLD_DATA" => $old_data
+        ];
     }
 
     function DELETE_HW_CAPACITY($iConRLM, $data, $is_csv){

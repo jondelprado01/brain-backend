@@ -81,15 +81,38 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
     //HW OVERRIDE MODULE
     elseif (strpos($module, "hw-override") !== false) {
 
-        //PLAN NON-BOARD - TYPE 3
-        if (strpos($module, "plan non-board") !== false) {
-            //ADD, DELETE
-            $iden_field = ["SITE_NUM", "RES_AREA", "HW_TYPE_HMS", "HW_TYPE_SUS", "HW_NAME", "HMS_COUNT", "ID"];
-            $iden_data  = $payload;
+        if (strpos($module, "mapping") !== false) {
+            //HW MAPPING - TYPE 1
+            //ADD, UPDATE, DELETE (CSV PROCESS TYPE INCLUDED)
+            $iden_payload = [];
+            $iden_field = ["MFG_PART_NUM", "HW_TYPE", "ID", "GENPOOL", "GENPOOL_CAPACITY", "GP_HW_TYPE"];
+
+            $iden_payload = array_map(function ($row) {
+                unset($row[1], $row[2], $row[3], $row[4], $row[10]);
+                return array_values($row);
+            }, $payload);
+
+            $iden_data  = $iden_payload;
             $is_multiple = true;
+
+            $info_payload = [];
+            $info_field = ["HW_NM", "EFF_START", "EFF_END", "CAPACITY", "ID"];
+
+            $info_payload = array_map(function ($row) {
+                unset($row[0], $row[5], $row[7], $row[8], $row[9], $row[10]);
+                return array_values($row);
+            }, $payload);
+
+            foreach ($info_payload as $key => $info) {
+                array_push($multiple_data, [
+                    "old_data_arr" => (count($old_data_payload) > 0) ? $old_data_payload[$key] : [],
+                    "new_data_arr" => (strpos($module, "delete")) ? [] : $info
+                ]);
+            }
+
         }
-        //HW CAPACITY - TYPE 2
         elseif (strpos($module, "capacity override") !== false){
+            //HW CAPACITY - TYPE 2
             //ADD, UPDATE, DELETE (CSV PROCESS TYPE INCLUDED)
             $iden_payload = [];
             $iden_field = ["HW_NAME", "HMS_COUNT", "HW_TYPE", "SITE_NUM", "RES_AREA", "ID"];
@@ -116,6 +139,13 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
                     "new_data_arr" => (strpos($module, "delete")) ? [] : $info
                 ]);
             }
+        }
+        elseif (strpos($module, "plan non-board") !== false) {
+            //PLAN NON-BOARD - TYPE 3
+            //ADD, DELETE
+            $iden_field = ["SITE_NUM", "RES_AREA", "HW_TYPE_HMS", "HW_TYPE_SUS", "HW_NAME", "HMS_COUNT", "ID"];
+            $iden_data  = $payload;
+            $is_multiple = true;
         }
     }
 
