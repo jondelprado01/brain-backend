@@ -208,8 +208,9 @@
 
     function ADD_BOARD_BURNIN($iConRLM, $data, $user){
         $curdate = date('Y-m-d H:i:s');
-        $values = [];
         $result = '';
+        $values = [];
+        $change_log = [];
 
         foreach ($data as $key => $dt) {
 
@@ -223,17 +224,27 @@
             if ($is_exists > 0) {
                 $update_query = 'UPDATE TEST.ADI_NONATE_TYPE_1 SET LOAD_HOURS = "'.$dt[3].'", LOAD_UNLOAD = "'.$dt[4].'", UPDATED_AT = "'.$curdate.'", UPDATED_BY = "'.$user['emp_name'].'" WHERE HASH = "'.$dt[6].'" ';
                 $result = ExecuteIQuery($update_query,$iConRLM);
+                array_push($change_log, $dt);
             }
             else{
-                array_push($values, '("", "'.$dt[0].'", "'.$dt[1].'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[4].'", "'.$dt[6].'", "'.$curdate.'", "'.$user['emp_name'].'", "", "")');
+                $query = 'INSERT INTO TEST.ADI_NONATE_TYPE_1 VALUES ("", "'.$dt[0].'", "'.$dt[1].'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[4].'", "'.$dt[6].'", "'.$curdate.'", "'.$user['emp_name'].'", "", "")';
+                $result = ExecuteIQuery($query,$iConRLM);
+
+                $get_id = 'SELECT LAST_INSERT_ID()';
+                $get_id_res = ExecuteIQuery($get_id, $iConRLM);
+
+                while($row = mysqli_fetch_assoc($get_id_res)){
+                    $dt[8] = $row['LAST_INSERT_ID()'];
+                    array_push($change_log, $dt);
+                }
             }
         }
 
-        if (count($values) > 0) {
-            $query = 'INSERT INTO TEST.ADI_NONATE_TYPE_1 VALUES '.implode(",", $values).'';
-            $result = ExecuteIQuery($query,$iConRLM);
-        }
-        return $result;
+        return [
+            "STATUS" => $result,
+            "CHANGE_LOG_DATA" => $change_log,
+            "OLD_DATA" => []
+        ];
     }
 
     function SEARCH_BOARD_SOCKET($iConRLM, $data){

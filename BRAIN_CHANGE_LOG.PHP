@@ -148,6 +148,60 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
             $is_multiple = true;
         }
     }
+    elseif (strpos($module, "non-ate") !== false) {
+        
+        if (strpos($module, "load/unload hours") !== false) {
+            //NON-ATE TYPE 1
+            $iden_payload = [];
+            $iden_field = ["MFG_PART_NUM", "BOARD", "BI_HOURS", "ID"];
+
+            $iden_payload = array_map(function ($row) {
+                unset($row[3], $row[4], $row[5], $row[6], $row[7]);
+                return array_values($row);
+            }, $payload);
+
+            $iden_data  = $iden_payload;
+            $is_multiple = true;
+
+            $info_payload = [];
+            $info_field = ["LOAD_HOURS", "LOAD_UNLOAD", "TURNS_PER_WEEK", "ID"];
+
+            $info_payload = array_map(function ($row) {
+                unset($row[0], $row[1], $row[2], $row[6], $row[7]);
+                return array_values($row);
+            }, $payload);
+
+            $old_data_payload = [];
+
+            //APPLICABLE ONLY FOR NON-ATE TYPE 1
+            foreach ($payload as $key => $pld) {
+                $id = $pld[8];
+                $old_data = json_decode($pld[7]);
+                array_push($old_data_payload, [
+                    $old_data[3],
+                    $old_data[4],
+                    $old_data[5],
+                    $id,
+                ]);
+            }
+
+            foreach ($info_payload as $key => $info) {
+                array_push($multiple_data, [
+                    "old_data_arr" => $old_data_payload[$key],
+                    "new_data_arr" => $info
+                ]);
+            }
+
+        }
+        elseif (strpos($module, "sockect efficiency") !== false) {
+            //NON-ATE TYPE 2
+            # code...
+        }
+        elseif (strpos($module, "capacity override") !== false) {
+            //NON-ATE TYPE 3
+            # code...
+        }
+    }
 
     $iden_query = CONSTRUCT_IDEN_QUERY($change_id, $iden_field, $iden_data, $is_multiple);
 
