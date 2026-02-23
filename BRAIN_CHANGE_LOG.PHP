@@ -173,7 +173,6 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
 
             $old_data_payload = [];
 
-            //APPLICABLE ONLY FOR NON-ATE TYPE 1
             foreach ($payload as $key => $pld) {
                 $id = $pld[8];
                 $old_data = json_decode($pld[7]);
@@ -193,9 +192,44 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
             }
 
         }
-        elseif (strpos($module, "sockect efficiency") !== false) {
+        elseif (strpos($module, "socket efficiency") !== false) {
             //NON-ATE TYPE 2
-            # code...
+            $iden_payload = [];
+            $iden_field = ["BOARD", "ID"];
+
+            $iden_payload = array_map(function ($row) {
+                unset($row[1], $row[2], $row[4]);
+                return array_values($row);
+            }, $payload);
+
+            $iden_data  = $iden_payload;
+            $is_multiple = true;
+
+            $info_payload = [];
+            $info_field = ["SOCKET_EFFICIENCY", "ID"];
+
+            $info_payload = array_map(function ($row) {
+                unset($row[0], $row[2], $row[4]);
+                return array_values($row);
+            }, $payload);
+
+            $old_data_payload = [];
+
+            foreach ($payload as $key => $pld) {
+                $id = $pld[3];
+                $old_data = json_decode($pld[4]);
+                array_push($old_data_payload, [
+                    $old_data[1],
+                    $id,
+                ]);
+            }
+
+            foreach ($info_payload as $key => $info) {
+                array_push($multiple_data, [
+                    "old_data_arr" => $old_data_payload[$key],
+                    "new_data_arr" => $info
+                ]);
+            }
         }
         elseif (strpos($module, "capacity override") !== false) {
             //NON-ATE TYPE 3
