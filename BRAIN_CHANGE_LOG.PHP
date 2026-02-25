@@ -233,7 +233,31 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
         }
         elseif (strpos($module, "capacity override") !== false) {
             //NON-ATE TYPE 3
-            # code...
+            $iden_payload = [];
+            $iden_field = ["HW_NM", "HW_TYPE", "ID", "SITE_NUM", "RES_AREA"];
+
+            $iden_payload = array_map(function ($row) {
+                unset($row[1], $row[2], $row[3], $row[4]);
+                return array_values($row);
+            }, $payload);
+
+            $iden_data  = $iden_payload;
+            $is_multiple = true;
+
+            $info_payload = [];
+            $info_field = ["EFF_START", "EFF_END", "OVERRIDE_CAP", "CURRENT_CAP", "ID"];
+
+            $info_payload = array_map(function ($row) {
+                unset($row[0], $row[5], $row[7], $row[8]);
+                return array_values($row);
+            }, $payload);
+
+            foreach ($info_payload as $key => $info) {
+                array_push($multiple_data, [
+                    "old_data_arr" => (count($old_data_payload) > 0) ? $old_data_payload[$key] : [],
+                    "new_data_arr" => (strpos($module, "delete")) ? [] : $info
+                ]);
+            }
         }
     }
 

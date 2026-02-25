@@ -278,7 +278,6 @@
     function ADD_SOCKET($iConRLM, $data, $user){
         $curdate = date('Y-m-d H:i:s');
         $result = '';
-        $values = [];
         $change_log = [];
 
         foreach ($data as $key => $dt) {
@@ -449,34 +448,76 @@
 
     function ADD_HW_CAPACITY($iConRLM, $data, $user){
         $curdate = date('Y-m-d H:i:s');
-        $values = [];
         $result = '';
+        $change_log = [];
+
         foreach ($data as $key => $dt) {
-            array_push($values, '("", "'.strtoupper($dt[0]).'", "'.$dt[1].'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[4].'", "'.$dt[5].'", "'.$dt[7].'", "'.$dt[8].'", "'.$curdate.'", "'.$user['emp_name'].'", "", "")');
-        }
-        if (count($values) > 0) {
-            $query = 'INSERT INTO TEST.ADI_NONATE_TYPE_3 VALUES '.implode(",", $values).'';
+            $query = 'INSERT INTO TEST.ADI_NONATE_TYPE_3 VALUES ("", "'.strtoupper($dt[0]).'", "'.$dt[1].'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[4].'", "'.$dt[5].'", "'.$dt[7].'", "'.$dt[8].'", "'.$curdate.'", "'.$user['emp_name'].'", "", "")';
             $result = ExecuteIQuery($query,$iConRLM);
+
+            $get_id = 'SELECT LAST_INSERT_ID()';
+            $get_id_res = ExecuteIQuery($get_id, $iConRLM);
+
+            while($row = mysqli_fetch_assoc($get_id_res)){
+                $dt[6] = $row['LAST_INSERT_ID()'];
+                array_push($change_log, $dt);
+            }
         }
-        return $result;
+
+        return [
+            "STATUS" => $result,
+            "CHANGE_LOG_DATA" => $change_log,
+            "OLD_DATA" => []
+        ];
     }
 
     function EDIT_HW_CAPACITY($iConRLM, $data, $user){
         $curdate = date('Y-m-d H:i:s');
-        $query = 'UPDATE TEST.ADI_NONATE_TYPE_3 SET EFF_START = "'.$data[3].'", EFF_END = "'.$data[4].'", OVERRIDE_CAP = "'.$data[2].'", UPDATED_AT = "'.$curdate.'", UPDATED_BY = "'.$user['emp_name'].'" WHERE ID = '.$data[0].'';
+        $query = 'UPDATE TEST.ADI_NONATE_TYPE_3 SET EFF_START = "'.$data[0][1].'", EFF_END = "'.$data[0][2].'", OVERRIDE_CAP = "'.$data[0][3].'", UPDATED_AT = "'.$curdate.'", UPDATED_BY = "'.$user['emp_name'].'" WHERE ID = '.$data[0][6].'';
         $result = ExecuteIQuery($query,$iConRLM);
-        return $result;
+        
+        return [
+            "STATUS" => $result,
+            "CHANGE_LOG_DATA" => [],
+            "OLD_DATA" => []
+        ];
     }
 
     function DELETE_HW_CAPACITY($iConRLM, $data){
         $ids = [];
+        $old_data = [];
+        $change_log = [];
         $curdate = date('Y-m-d H:i:s');
+
         foreach ($data as $key => $dt) {
             array_push($ids, $dt['ID']);
         }
+
+        $get_old_data = 'SELECT * FROM TEST.ADI_NONATE_TYPE_3 WHERE ID IN ("'.implode('","', $ids).'")';
+        $get_old_data_res = ExecuteIQuery($get_old_data,$iConRLM);
+        while($row = mysqli_fetch_assoc($get_old_data_res)){
+            array_push($change_log, [
+                $row['HW_NM'],
+                $row['EFF_START'],
+                $row['EFF_END'],
+                $row['OVERRIDE_CAP'],
+                $row['CURRENT_CAP'],
+                $row['HW_TYPE'],
+                $row['ID'],
+                $row['SITE_NUM'],
+                $row['RES_AREA']
+            ]);
+            array_push($old_data, [$row['EFF_START'], $row['EFF_END'], $row['OVERRIDE_CAP'], $row['CURRENT_CAP'], $row['ID']]);
+        }
+        
         $query = 'DELETE FROM  TEST.ADI_NONATE_TYPE_3 WHERE ID IN ("'.implode('","', $ids).'")';
         $result = ExecuteIQuery($query,$iConRLM);
-        return $result;
+
+        return [
+            "STATUS" => $result,
+            "CHANGE_LOG_DATA" => $change_log,
+            "OLD_DATA" => $old_data
+        ];
     }
 
     function GET_WEEKS($iConRLM){
