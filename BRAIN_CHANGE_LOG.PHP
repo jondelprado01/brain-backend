@@ -7,14 +7,23 @@ ini_set("error_reporting",E_ALL);
 ini_set("display_errors",1);
 
 $aryRequest = $_REQUEST;
-$requestMedthod = $_SERVER['REQUEST_METHOD'];
+$process = "";
 date_default_timezone_set('Asia/Manila');
 
 $iConRLM = Open_ILink("localhost");
 
 $old_data_payload = isset($_POST['old_data']) ? $_POST['old_data'] : [];
 
-print_r(json_encode(ADD_LOG($iConRLM, $_POST['payload'], $_POST['user_details'], $_POST['module'], $old_data_payload)));
+if(isset($aryRequest["PROCESS_TYPE"]) && $aryRequest["PROCESS_TYPE"] != "") {
+    $process = $aryRequest["PROCESS_TYPE"];
+}
+
+if ($process != "") {
+     print_r(json_encode(GET_CHANGE_LOG($iConRLM, $_POST['emp_id'], $_POST['module'], $_POST['data'], $_POST['start_date'], $_POST['end_date'])));
+}
+else{
+    print_r(json_encode(ADD_LOG($iConRLM, $_POST['payload'], $_POST['user_details'], $_POST['module'], $old_data_payload)));
+}
 
 mysqli_close($iConRLM);
 
@@ -344,6 +353,124 @@ function CONSTRUCT_INFO_QUERY($change_id, $field, $old_data, $new_data, $is_mult
 
     return $query;
 
+}
+
+function GET_CHANGE_LOG($iConRLM, $emp_id, $module, $data, $start_date, $end_date){
+
+    $result = [];
+    $raw_result = [];
+    $target_module = "";
+    $change_type = "";
+
+    if ($module == "HW OVERRIDE TYPE-1") {
+        $target_module = "mapping";
+        $change_type = ['ADD', 'UPDATE', 'DELETE'];
+    }
+    elseif ($module == "NON-ATE TYPE-1") {
+        $target_module = "burn-in load/unload hours";
+        $change_type = ['UPDATE'];
+    }
+    
+    if ($target_module != "") {
+        $check_master = 'SELECT 
+            CM.*,
+    
+            (SELECT GROUP_CONCAT(IDEN_VALUE)
+            FROM BRAIN.CHANGE_IDEN 
+            WHERE CHANGE_ID = CM.CHANGE_ID) AS IDEN_VALUES,
+    
+            (
+            SELECT GROUP_CONCAT(
+                CONCAT_WS("|", CHANGE_INFO_ID, CHANGE_ID, INFO_FIELD, INFO_VALUE_OLD, INFO_VALUE_NEW)
+                SEPARATOR "; "
+            )
+            FROM BRAIN.CHANGE_INFO
+            WHERE CHANGE_ID = CM.CHANGE_ID
+        ) AS INFO_ROWS
+    
+        FROM BRAIN.CHANGE_MASTER CM
+    
+        WHERE CM.EMP_ID = "'.$emp_id.'"
+        AND CM.MODULE LIKE "%'.$target_module.'%"
+        AND CM.DATE BETWEEN "'.$start_date.'" AND "'.$end_date.'"
+        AND EXISTS (
+            SELECT 1 
+            FROM BRAIN.CHANGE_IDEN CID 
+            WHERE CID.CHANGE_ID = CM.CHANGE_ID
+            AND CID.IDEN_VALUE LIKE "%'.$data.'%"
+        ) ORDER BY CM.DATE DESC;';
+    
+        $check_master_res = ExecuteIQuery($check_master, $iConRLM);
+        while($row = mysqli_fetch_assoc($check_master_res)){
+            array_push($raw_result, $row);
+        }
+    
+        if (count($raw_result) > 0) {
+            $start = strtotime($start_date);
+            $end   = strtotime($end_date);
+        
+            $dates = array();
+            $current = $start;
+        
+            while ($current <= $end) {
+                $range_val = [];
+                $start_range = date('m/d/Y 06:00:00', $current);
+                $end_range = date('m/d/Y 05:59:00', strtotime('+1 day', $current));
+        
+                foreach ($raw_result as $rkey => $raw) {
+                    $sr_totime = strtotime($start_range);
+                    $er_totime = strtotime($end_range);
+                    $rw_totime = strtotime($raw['DATE']);
+        
+                    if ($rw_totime >= $sr_totime && $rw_totime <= $er_totime) {
+                        if (strpos($raw['IDEN_VALUES'], $data) !== false) {
+        
+                            $data_key = "";
+                            $split_data = explode(",", $raw['IDEN_VALUES']);
+        
+                            foreach ($split_data as $skey => $split) {
+                                if (strpos($split, $data) !== false) {
+                                    $data_key = $split;
+                                    break;
+                                }
+                            }
+        
+                            $range_val[$data_key][] = $raw;
+                        }
+                    }
+                }
+                
+                $date_val = $start_range." - ".$end_range;
+                $dates[$date_val] = $range_val;
+                $current = strtotime('+1 day', $current);
+            }
+    
+            $dates = array_filter($dates);
+
+            uksort($dates, function($a, $b) {
+
+                // Extract start date (before " - ")
+                list($dateA) = explode(' - ', $a);
+                list($dateB) = explode(' - ', $b);
+
+                // Convert to timestamp (MM/DD/YYYY format)
+                $timeA = strtotime($dateA);
+                $timeB = strtotime($dateB);
+
+                // DESC order (latest first)
+                return $timeB - $timeA;
+            });
+
+    
+            $result = [
+                $module => [
+                    $dates
+                ]
+            ];
+        }
+    }
+
+    return $result;
 }
 
 ?>
