@@ -54,8 +54,8 @@ $aryIO = array([
     $iConRLM = Open_ILink("localhost");
 
     #2025-10-03 RM changed to BRAIN_ADI_ALLDB_ALL
-    $retrieve_data 			= BODS_JDA_ADI_STAGE_V2($iConRLM,$aryInput);
-	$retrieve_prio 			= ADD_SETUP_PRIO($iConRLM, $retrieve_data);
+    $retrieve_data 			= BODS_JDA_ADI_STAGE_V2($iConRLM,$aryInput,$bolDebug);
+   	$retrieve_prio 			= ADD_SETUP_PRIO($iConRLM, $retrieve_data);
     $retrieve_prim_setup 	= GET_PRIMARY_SETUP($iConRLM, $aryInput);
     $retrieve_prim_pending 	= GET_PRIMARY_SETUP($iConRLM, null);
     $retrieve_prim_former 	= GET_PRIMARY_SETUP_FORMER($iConRLM, $retrieve_data);
@@ -70,13 +70,21 @@ $aryIO = array([
 
     mysqli_close($iConRLM);
 
+ if($bolDebug === true) {
+    	print_r2($retrieve_data);
+	    print_r2($retrieve_prio);
+	    print_r2($retrieve_prim_setup);
+	    print_r2($retrieve_dedication);
+    }
+	
+
 // }
 // else {
 //     print_r("error");
 // }
 
 
-function BODS_JDA_ADI_STAGE_V2($iConRLM, $aryInput){
+function BODS_JDA_ADI_STAGE_V2($iConRLM,$aryInput,$bolDebug=false) {
 
     #2025-02-28 RM fixed this. you cant do a str_replace on an array. and anyway, should be using mysqli_real_escape_string. and always check for > 0 elements
     #connections should not be made within a function. impossible to track open/close from a flow perspective
@@ -143,6 +151,9 @@ function BODS_JDA_ADI_STAGE_V2($iConRLM, $aryInput){
         FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA
 		LEFT JOIN BODS_JDA_ADI_EXPORT.ATOM_MASTER AM ON AAA.ATOM_MASTER_ID = AM.AM_ID
         WHERE AAA.MFG_PART_NUM IN ('".implode("','",$aryTemp)."')";
+	if($bolDebug === true) {
+		echo $strSQL."<BR>";
+	}
     $RSMain = ExecuteIQuery($strSQL,$iConRLM);
 
     $aryTry = array("ENGR_TESTER","ENGR_HANDLER","ATOM_TESTER","ATOM_HANDLER");
@@ -820,6 +831,11 @@ if($bolJSON === true) {
 }else{
 	// Print_R2($aryResponse);
     print_r(json_encode($aryResponse));
+}
+
+
+function Print_R2($aryArray) {
+	echo str_replace("<BR><BR>","<BR>",str_replace("\n","<BR>",str_replace(" ","&nbsp;",print_r($aryArray,true))));
 }
 
 ?>
