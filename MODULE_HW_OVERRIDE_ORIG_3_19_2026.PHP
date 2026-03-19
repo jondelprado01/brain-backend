@@ -158,7 +158,7 @@
                 INNER JOIN BRAIN.HW_NONBOARD_PRR PRR ON HMS.SITE_NUM = PRR.SITE_NUM AND HMS.RES_AREA = PRR.RES_AREA
                 INNER JOIN BRAIN.HW_NONBOARD_SETUP_ACTIVE SACTIVE ON PRR.REF_SETUP_ID = SACTIVE.REF_SETUP_ID
                 INNER JOIN BRAIN.HW_NONBOARD_REF REF ON PRR.REF_SETUP_ID = REF.REF_SETUP_ID AND HMS.HW_NM = REF.HW_NM
-                WHERE REF.HW_NM IN ("'.implode('","', $hw_names) .'") AND HMS.TOTAL_QTY > 0
+                WHERE REF.HW_NM IN ("'.implode('","', $hw_names) .'")
                 GROUP BY SITE_NUM, RES_AREA, HW_NM, HW_TYPE LIMIT 100';
 
             $res_hw = ExecuteIQuery($get_hw,Open_ILink("MXHTAFOT01L"));
