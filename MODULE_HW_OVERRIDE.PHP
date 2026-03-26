@@ -3,6 +3,7 @@
     header('Access-Control-Allow-Origin: *');
     include_once("../MYSQLI_COMMON_FUNCTIONS.PHP");
     include_once("../TEST/ADI_FUNCTIONS_022.PHP");
+    ini_set('post_max_size', '32M'); // test only
     ini_set("error_reporting",E_ALL);
     ini_set("display_errors",1);
 
