@@ -150,7 +150,7 @@ function BODS_JDA_ADI_STAGE_V2($iConRLM,$aryInput,$bolDebug=false) {
 			AAA.ATOM_MASTER_ID
         FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA
 		LEFT JOIN BODS_JDA_ADI_EXPORT.ATOM_MASTER AM ON AAA.ATOM_MASTER_ID = AM.AM_ID
-        WHERE AAA.MFG_PART_NUM IN ('".implode("','",$aryTemp)."')";
+        WHERE AAA.MFG_PART_NUM IN ('".implode("','",$aryTemp)."') and EFF_START_DT is NULL";
 	if($bolDebug === true) {
 		echo $strSQL."<BR>";
 	}
