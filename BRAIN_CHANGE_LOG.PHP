@@ -52,6 +52,108 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
     while($row = mysqli_fetch_assoc($get_id_res)){
         $change_id = $row['LAST_INSERT_ID()'];
     }
+
+    //planning assumptions
+    if (strpos($module, "planning-assumptions") !== false) {
+        // alternate to primary
+        if (strpos($module, "alternate-to-primary") !== false) {
+            $is_multiple = true;
+            $iden_field = ["MFG_PART_NUM", "SAP_RTE_ID", "SITE_NUM", "STEP_NM"];
+            $iden_data  = [];
+
+            $info_field = ["ENGR_TESTER", "ENGR_HANDLER", "ATOM_TESTER", "ATOM_HANDLER"];
+            $old_data   = [];
+            $new_data   = [];
+
+            foreach ($payload as $key => $pld) {
+                $new_data_payload = (array)json_decode($pld[11]);
+                $old_data_payload = ($pld[12] != "") ? (array)json_decode($pld[12]) : [];
+                $col_new = MAP_COLUMNS($new_data_payload);
+
+                //construct iden_data
+                array_push($iden_data, [$col_new['MFG_PART_NUM'], $col_new['SAP_RTE_ID'], $col_new['SITE_NUM'], $col_new['STEP_NM']]);
+
+                //construct info - old data
+                if (count($old_data_payload) > 0) {
+                    $col_old = MAP_COLUMNS($old_data_payload);
+                    array_push($old_data, [$old_data_payload['ENGR_TESTER'], $old_data_payload['ENGR_HANDLER'], $col_old['ATOM_TESTER'], $col_old['ATOM_HANDLER']]);
+                }
+
+                //construct info - new data
+                array_push($new_data, [$new_data_payload['ENGR_TESTER'], $new_data_payload['ENGR_HANDLER'], $col_new['ATOM_TESTER'], $col_new['ATOM_HANDLER']]);
+            }
+
+            foreach ($new_data as $key => $new_dt) {
+                array_push($multiple_data, [
+                    "old_data_arr" => (count($old_data) > 0) ? $old_data[$key] : [],
+                    "new_data_arr" => $new_dt
+                ]);
+            }
+        }
+        // flag setups
+        if (strpos($module, "flag-setups") !== false) {
+            $is_multiple = true;
+            $iden_field = ["MFG_PART_NUM", "SAP_RTE_ID", "SITE_NUM", "STEP_NM", "ENGR_TESTER", "ENGR_HANDLER", "ATOM_TESTER", "ATOM_HANDLER"];
+            $iden_data  = [];
+
+            $info_field = ['FLAG_STATUS'];
+            $old_data   = [];
+            $new_data   = [];
+
+            foreach ($payload as $key => $pld) {
+                $pld_col = MAP_COLUMNS($pld);
+
+                //construct iden_data
+                array_push($iden_data, [$pld_col['MFG_PART_NUM'], $pld_col['SAP_RTE_ID'], $pld_col['SITE_NUM'], $pld_col['STEP_NM'], 
+                                        $pld['ENGR_TESTER'], $pld['ENGR_HANDLER'], $pld_col['ATOM_TESTER'], $pld_col['ATOM_HANDLER']]);
+
+                //construct info - new & old data
+                array_push($old_data, [(strpos($module, "unplannable") !== false) ? "PLANNABLE" : "UNPLANNABLE"]);
+                array_push($new_data, [(strpos($module, "unplannable") !== false) ? "UNPLANNABLE" : "PLANNABLE"]);
+            }
+
+            foreach ($new_data as $key => $new_dt) {
+                array_push($multiple_data, [
+                    "old_data_arr" => $old_data[$key],
+                    "new_data_arr" => $new_dt
+                ]);
+            }
+        }
+
+        if (strpos($module, "change-hw-set") !== false) {
+            $is_multiple = true;
+            $iden_field = ["ID", "MFG_PART_NUM", "SAP_RTE_ID", "SITE_NUM", "STEP_NM", "ENGR_TESTER", "ENGR_HANDLER", "ATOM_TESTER", "ATOM_HANDLER"];
+            $iden_data  = [];
+
+            $info_field = ['HW_SET_ID'];
+            $old_data   = [];
+            $new_data   = [];
+
+            foreach ($payload as $key => $pld) {
+                $pld_col = MAP_COLUMNS($pld[0]);
+
+                //construct iden_data
+                array_push($iden_data, [$pld[0]['ID'], $pld_col['MFG_PART_NUM'], $pld_col['SAP_RTE_ID'], $pld_col['SITE_NUM'], $pld_col['STEP_NM'], 
+                                        $pld[0]['ENGR_TESTER'], $pld[0]['ENGR_HANDLER'], $pld_col['ATOM_TESTER'], $pld_col['ATOM_HANDLER']]);
+
+                //construct info - new & old data
+                array_push($old_data, [$pld[1]]);
+                array_push($new_data, [$pld[2]]);
+            }
+
+            foreach ($new_data as $key => $new_dt) {
+                array_push($multiple_data, [
+                    "old_data_arr" => $old_data[$key],
+                    "new_data_arr" => $new_dt
+                ]);
+            }
+        }
+
+        // dedications
+        if (strpos($module, "dedications") !== false) {
+            # code...
+        }
+    }
     
     //PLANNING ASSUMPTIONS - TIMEPHASED MODULE
     if(strpos($module, "time-phased instance") !== false){
@@ -471,6 +573,25 @@ function GET_CHANGE_LOG($iConRLM, $emp_id, $module, $data, $start_date, $end_dat
     }
 
     return $result;
+}
+
+// for planning assumptions module only
+function MAP_COLUMNS($dt){
+    $col_rte  = (isset($dt['RTE_ID']))         ? $dt['RTE_ID']        : $dt['SAP_RTE_ID'];
+    $col_part = (isset($dt['PART']))           ? $dt['PART']          : $dt['MFG_PART_NUM'];
+    $col_site = (isset($dt['SITE']))           ? $dt['SITE']          : $dt['SITE_NUM'];
+    $col_step = (isset($dt['STEP']))           ? $dt['STEP']          : $dt['STEP_NM'];
+    $col_tstr = (isset($dt['ATOM_TESTER']))    ? $dt['ATOM_TESTER']   : $dt['TESTER'];
+    $col_hndr = (isset($dt['ATOM_HANDLER']))   ? $dt['ATOM_HANDLER']  : $dt['HANDLER'];
+
+    return [
+        "MFG_PART_NUM"  => $col_part,
+        "SITE_NUM"      => $col_site,
+        "STEP_NM"       => $col_step,
+        "ATOM_TESTER"   => $col_tstr,
+        "ATOM_HANDLER"  => $col_hndr,
+        "SAP_RTE_ID"    => $col_rte
+    ];
 }
 
 ?>
