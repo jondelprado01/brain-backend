@@ -63,6 +63,9 @@ elseif ($process == "SET_DEDICATION") {
 elseif ($process == "REMOVE_DEDICATION") {
     print_r(json_encode(REMOVE_DEDICATION($iConRLM, $_POST['payload'], $_POST['primary'], $_POST['user_details'])));
 }
+elseif ($process == "UPDATE_DEDICATION") {
+    print_r(json_encode(UPDATE_DEDICATION($iConRLM, $_POST['payload'], $_POST['user_details'])));
+}
 else{
     print_r(json_encode(RESET_PRIMARY($iConRLM, $_POST['payload'])));
 }
@@ -770,6 +773,13 @@ function REMOVE_DEDICATION($iConRLM, $ded_id, $default_primary, $user_details){
     }
 
     return $response;
+}
+
+//UPDATE DEDICATION - 05/26/2026
+function UPDATE_DEDICATION($iConRLM, $payload, $user_details){
+    $query = 'UPDATE TEST.ADI_PRIMARY_SETUP SET TESTER = "'.$payload[34].'", HANDLER = "'.$payload[35].'" WHERE ID = '.$payload[20].' AND DED_ID = '.$payload[28].'';
+    $result = ExecuteIQuery($query,$iConRLM);
+    return $result;
 }
 
 ?>
