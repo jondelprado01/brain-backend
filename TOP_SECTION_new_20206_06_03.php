@@ -693,10 +693,6 @@ function GET_OEE_OVERRIDE($iConRLM, $retrieve_data){
 			if (count($oee_val_arr) > 0) {
 				$retrieve_data[$rkey]['OEE'] = min($oee_val_arr);
 			}
-			return [
-				"oee" => $oee_val_arr,
-				"setup" => $rd
-			];
 		}
 		$return_data = $retrieve_data;
 	}
