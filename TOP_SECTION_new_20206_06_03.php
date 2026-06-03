@@ -690,7 +690,13 @@ function GET_OEE_OVERRIDE($iConRLM, $retrieve_data){
 					array_push($oee_val_arr, (double)$oee_overrides[$oee_index]['OEE_VAL']);
 				}
 			}
-			$retrieve_data[$rkey]['OEE'] = min($oee_val_arr);
+			if (count($oee_val_arr) > 0) {
+				$retrieve_data[$rkey]['OEE'] = min($oee_val_arr);
+			}
+			return [
+				"oee" => $oee_val_arr,
+				"setup" => $rd
+			];
 		}
 		$return_data = $retrieve_data;
 	}
