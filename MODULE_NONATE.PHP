@@ -59,7 +59,7 @@
             break;
 
         case 'SEARCH_HW':
-            print_r(json_encode(SEARCH_HW($iConRLMxhT, $_POST['payload'])));
+            print_r(json_encode(SEARCH_HW_V2($iConRLMxhT, $_POST['payload'])));
             break;
             
         case 'GET_HW_CAPACITY':
@@ -147,7 +147,15 @@
                     WHERE BURNIN_BOARD.HW_NM LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%" OR MFG_PART_NUM LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%"
                     ORDER BY IF(BURNIN_BOARD IS NOT NULL,0,1), IF(BURNIN_HOURS_1 IS NOT NULL,0,1), IF(BURNIN_TYPE IS NOT NULL,0,1)
                 ) BI_SUB
-                GROUP BY MFG_PART_NUM';
+                GROUP BY MFG_PART_NUM
+                UNION
+                SELECT DISTINCT
+                MFG_PART_NUM,
+                BOARD_NAME BURNIN_BOARD,
+                PROCESS_HOURS BURNIN_HOURS_1,
+                NULL BURNIN_TYPE
+                FROM BODS_JDA_STAGE.V_BI_ATTR
+                WHERE BOARD_NAME LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%" OR MFG_PART_NUM LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%"';
 
         $res_query = ExecuteIQuery($query,$iConRLM);
         while($row = mysqli_fetch_assoc($res_query)){
@@ -163,6 +171,7 @@
 
     function MASS_SEARCH_BOARD_BURNIN($iConRLM, $part_data, $board_data){
         $result = [];
+        /*OLD
         $query = 'SELECT
                 MFG_PART_NUM,
                 COALESCE(BURNIN_BOARD) BURNIN_BOARD,
@@ -182,9 +191,18 @@
                     WHERE BURNIN_BOARD.HW_NM IN ("'.implode('","', $board_data).'") OR MFG_PART_NUM IN ("'.implode('","', $part_data).'")
                     ORDER BY IF(BURNIN_BOARD IS NOT NULL,0,1), IF(BURNIN_HOURS_1 IS NOT NULL,0,1), IF(BURNIN_TYPE IS NOT NULL,0,1)
                 ) BI_SUB
-                GROUP BY MFG_PART_NUM';
+                GROUP BY MFG_PART_NUM
+            */
+            $strSQL = '
+                SELECT DISTINCT
+                MFG_PART_NUM,
+                BOARD_NAME BURNIN_BOARD,
+                PROCESS_HOURS BURNIN_HOURS_1,
+                NULL BURNIN_TYPE
+                FROM BODS_JDA_STAGE.V_BI_ATTR
+                WHERE BOARD_NAME IN ("'.implode('","', $board_data).'") OR MFG_PART_NUM IN ("'.implode('","', $part_data).'")';
 
-        $res_query = ExecuteIQuery($query,$iConRLM);
+        $res_query = ExecuteIQuery($strSQL,$iConRLM);
         while($row = mysqli_fetch_assoc($res_query)){
             if ($row['BURNIN_HOURS_1'] == NULL) {
                 $row['BURNIN_HOURS_1'] = 24;
@@ -249,13 +267,22 @@
 
     function SEARCH_BOARD_SOCKET($iConRLM, $data){
         $result = [];
+
+        $strSQL = '
+            SELECT DISTINCT
+            BOARD_NAME BURNIN_BOARD,
+            MIN(SOCKET_EFFICIENCY) SOCKET_EFFICIENCY
+            FROM BODS_JDA_STAGE.V_BI_ATTR
+            WHERE BOARD_NAME LIKE "'.$data.'%"';
+        #2026-06-02 RM now referencing only bods_jda_stage.v_bi_attr
+        /*old
         $query = 'SELECT DISTINCT
                 BURNIN_BOARD.HW_NM BURNIN_BOARD
                 FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA
                 INNER JOIN BODS_JDA_ADI_EXPORT.HARDWARE_SET BURNIN_BOARD ON AAA.HW_SET_ID = BURNIN_BOARD.HW_SET_ID AND BURNIN_BOARD.HW_TYPE = "BURNIN_BOARD"
                 WHERE BURNIN_BOARD.HW_NM LIKE "'.$data.'%"';
-
-        $res_query = ExecuteIQuery($query,$iConRLM);
+        */
+        $res_query = ExecuteIQuery($strSQL,$iConRLM);
         while($row = mysqli_fetch_assoc($res_query)){
             $row['SOCKET_EFFICIENCY'] = '95';
             $string = $row['BURNIN_BOARD']."|".$row['SOCKET_EFFICIENCY'];
@@ -315,19 +342,139 @@
         ];
     }
 
+    function SEARCH_HW_V2($iConRLM,$data){
+        $aryReturn = array();
+            
+        if ($data != null || $data != ''){
+            #2026-05-02 RM added bods_jda_stage.v_bi_attr as source for hw_names
+            $strSQL = "
+                SELECT DISTINCT SITE_NUM, RES_AREA, HW_TYPE RES_TYPE, REPLACE(HW_NM,'_ZEROCAP','') RES_NM
+                FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA INNER JOIN BODS_JDA_ADI_EXPORT.HARDWARE_SET HWS ON AAA.HW_SET_ID = HWS.HW_SET_ID
+                WHERE HW_NM LIKE '".$data."%' AND HW_NM NOT LIKE '%FAKE' AND HW_TYPE = 'BURNIN_BOARD'
+                UNION 
+                SELECT DISTINCT SITE_NUM, RES_AREA, HW_TYPE, REPLACE(HW_NM,'_ZEROCAP','') FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA INNER JOIN BODS_JDA_ADI_EXPORT.HARDWARE_ALTERNATES HWA ON AAA.HW_SET_ID = HWA.HW_SET_ID
+                WHERE HW_NM LIKE '".$data."%' AND HW_NM NOT LIKE '%FAKE' AND HW_TYPE = 'BURNIN_BOARD'
+                UNION
+                SELECT DISTINCT
+                SITE_NUM,PROCESS_AREA,CONCAT(PROCESS_AREA,'_BOARD'), BOARD_NAME FROM BODS_JDA_STAGE.V_BI_ATTR WHERE BOARD_NAME LIKE '".$data."%'";
+            #echo $strSQL."<BR>";
+            $RSMain = ExecuteIQuery($strSQL,$iConRLM);
+
+            $aryMap["NAME_HASH"] = array();
+            while ($LineMain = mysqli_fetch_assoc($RSMain)) {
+                $aryTemp = array(
+                    "SITE_NUM"=>$LineMain["SITE_NUM"],
+                    "RES_AREA"=>$LineMain["RES_AREA"],
+                    "RES_TYPE"=>$LineMain["RES_TYPE"]
+                );
+                $strName = $LineMain["RES_NM"];
+                $strSHA1 = sha1(serialize($aryTemp));
+                $aryMap["NAME_HASH"][$strName][] = $strSHA1;
+            }
+
+            #print_r($aryMap["NAME_HASH"]);
+
+            $aryName = array();
+            foreach(array_keys($aryMap["NAME_HASH"]) as $strName) {
+                $aryName[] = mysqli_real_escape_string($iConRLM,$strName);
+            }
+
+            $aryFound = array();
+            if(count($aryName) > 0) {
+                #v_bi_attr first
+                $strSQL = "
+                    SELECT
+                    SITE_NUM,
+                    PROCESS_AREA RES_AREA,
+                    CONCAT(PROCESS_AREA,'_BOARD') RES_TYPE,
+                    BOARD_NAME RES_NM,
+                    MAX(HW_COUNT) EFF_RES_CNT
+                    FROM BODS_JDA_STAGE.V_BI_ATTR
+                    WHERE EFF_DATE IS NULL
+                    AND BOARD_NAME IN ('".implode("','",$aryName)."')
+                    GROUP BY SITE_NUM, RES_AREA, RES_TYPE, RES_NM;";
+                #echo $strSQL."<BR>";
+                $RSMain = ExecuteIQuery($strSQL,$iConRLM);
+                while ($LineMain = mysqli_fetch_assoc($RSMain)) {
+                    $strName = $LineMain["RES_NM"];
+
+                    $aryTemp = array(
+                        "SITE_NUM"=>$LineMain["SITE_NUM"],
+                        "RES_AREA"=>$LineMain["RES_AREA"],
+                        "RES_TYPE"=>$LineMain["RES_TYPE"]
+                    );
+                    $strSHA1 = sha1(serialize($aryTemp));
+
+                    #echo $strName." / ".$strSHA1."<BR>";
+                    if(isset($aryMap["NAME_HASH"][$strName]) && in_array($strSHA1,$aryMap["NAME_HASH"][$strName])) {
+                        $strType = $LineMain["RES_TYPE"];
+
+                        $aryReturn[$strType][] = array(
+                            "HW_NM"=>$strName,
+                            "HW_TYPE"=>$strType,
+                            #huh???
+                            "REQUIRED_QTY"=>(double)$LineMain["EFF_RES_CNT"],
+                            "SITE_NUM"=>$LineMain["SITE_NUM"],
+                            "RES_AREA"=>$LineMain["RES_AREA"]
+                        );
+
+                        #print_r($aryReturn);
+                        $aryFound[] = $strName;
+                    }
+                }
+            }
+
+            $aryFound = array_unique($aryFound);
+            $strSQL = "
+                SELECT 
+                SITE_NUM, 
+                RES_AREA,
+                RES_TYPE,
+                RES_NM,
+                MAX(EFF_RES_CNT) EFF_RES_CNT
+                FROM BODS_JDA_ADI_EXPORT.RESOURCE_CAPACITY 
+                WHERE EFF_START_DT IS NULL
+                AND RES_NM IN ('".implode("','",$aryName)."')
+                GROUP BY SITE_NUM, RES_AREA, RES_TYPE, RES_NM
+                HAVING EFF_RES_CNT > 0;";
+            #echo $strSQL."<BR>";
+            $RSMain = ExecuteIQuery($strSQL,$iConRLM);
+            while ($LineMain = mysqli_fetch_assoc($RSMain)) {
+                $strName = $LineMain["RES_NM"];
+
+                if(!in_array($strName,$aryFound)) {
+                    $strType = $LineMain["RES_TYPE"];
+
+                    $aryReturn[$strType][] = array(
+                        "HW_NM"=>$strName,
+                        "HW_TYPE"=>$strType,
+                        #huh???
+                        "REQUIRED_QTY"=>(double)$LineMain["EFF_RES_CNT"],
+                        "SITE_NUM"=>$LineMain["SITE_NUM"],
+                        "RES_AREA"=>$LineMain["RES_AREA"]
+                    );
+                }
+            }
+        }
+        #print_r($aryReturn);
+
+        return $aryReturn;
+    }
+
+
+
     function SEARCH_HW($iConRLM, $data){
         $hw_arr = [];
         $res_arr = [];
             
         if ($data != null || $data != ''){
-
             $get_hw = 'SELECT DISTINCT SITE_NUM, RES_AREA, HW_TYPE, REPLACE(HW_NM,"_ZEROCAP","") HW_NM FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA INNER JOIN BODS_JDA_ADI_EXPORT.HARDWARE_SET HWS ON AAA.HW_SET_ID = HWS.HW_SET_ID
                        WHERE HW_NM LIKE "'.$data.'%" AND HW_NM NOT LIKE "%FAKE" AND HW_TYPE = "BURNIN_BOARD"
                        UNION 
                        SELECT DISTINCT SITE_NUM, RES_AREA, HW_TYPE, REPLACE(HW_NM,"_ZEROCAP","") HW_NM FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA INNER JOIN BODS_JDA_ADI_EXPORT.HARDWARE_ALTERNATES HWA ON AAA.HW_SET_ID = HWA.HW_SET_ID
                        WHERE HW_NM LIKE "'.$data.'%" AND HW_NM NOT LIKE "%FAKE" AND HW_TYPE = "BURNIN_BOARD"';
             
-
+            echo $get_hw;
             $res_hw = ExecuteIQuery($get_hw, Open_ILink("MXHTAFOT01L"));
             while($row = mysqli_fetch_assoc($res_hw)){
                 array_push($hw_arr, $row);
@@ -348,6 +495,8 @@
             $hw_col_arr["HW_TYPE"] = array_unique(array_map(function($item) {
                 return $item['HW_TYPE'];
             }, $hw_arr));
+
+
 
             $get_hw_cap = 'SELECT DISTINCT SITE_NUM, RES_AREA, RES_TYPE, RES_NM, EFF_RES_CNT FROM BODS_JDA_ADI.RESOURCE_CAPACITY WHERE SITE_NUM IN ("'.implode('","', $hw_col_arr["SITE_NUM"]).'") AND 
                             RES_AREA IN ("'.implode('","', $hw_col_arr["RES_AREA"]).'") AND RES_TYPE IN ("'.implode('","', $hw_col_arr["HW_TYPE"]).'") AND 
