@@ -150,7 +150,7 @@ function BODS_JDA_ADI_STAGE_V2($iConRLM,$aryInput,$bolDebug=false) {
 			AAA.ATOM_MASTER_ID
         FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA
 		LEFT JOIN BODS_JDA_ADI_EXPORT.ATOM_MASTER AM ON AAA.ATOM_MASTER_ID = AM.AM_ID
-        WHERE AAA.MFG_PART_NUM IN ('".implode("','",$aryTemp)."') and EFF_START_DT is NULL";
+        WHERE AAA.MFG_PART_NUM IN ('".implode("','",$aryTemp)."')";
 	if($bolDebug === true) {
 		echo $strSQL."<BR>";
 	}
@@ -642,7 +642,6 @@ function GET_OEE_OVERRIDE($iConRLM, $retrieve_data){
 		}
 		$test = [];
 		foreach ($retrieve_data as $rkey => $rd) {
-			$oee_val_arr = [];
 			foreach ($identifier as $idtf) {
 				$match_counter = 0;
 				$split = explode("|", $idtf);
@@ -687,11 +686,11 @@ function GET_OEE_OVERRIDE($iConRLM, $retrieve_data){
 				}
 				$match_counter += 1;
 				if ($match_counter == $split_len) {
-					array_push($oee_val_arr, (double)$oee_overrides[$oee_index]['OEE_VAL']);
+					$retrieve_data[$rkey]['OEE'] = $oee_overrides[$oee_index]['OEE_VAL'];
 				}
 			}
-			$retrieve_data[$rkey]['OEE'] = min($oee_val_arr);
 		}
+
 		$return_data = $retrieve_data;
 	}
 	else{
