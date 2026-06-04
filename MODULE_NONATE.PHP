@@ -85,6 +85,11 @@
         case 'MASS_SEARCH_BOARD_BURNIN':
             print_r(json_encode(MASS_SEARCH_BOARD_BURNIN($iConRLMxhT, $_POST['partnum'], $_POST['board'])));
             break;
+        
+        //jon - by request only, not part of brain ui (mass delete via board_name)
+        case 'MASS_DELETE_TYPE_1': 
+            print_r(json_encode(MASS_DELETE_TYPE_1($iConRLM, $_POST['boards'])));
+            break;
 
         default:
             # code...
@@ -677,6 +682,23 @@
             array_push($week_arr, $row['FYWW']);
         }
         return $week_arr;
+    }
+
+    //jon - by request only, not part of brain ui (mass delete via board_name)
+    function MASS_DELETE_TYPE_1($iConRLM, $boards){
+        
+        //basic checker for all affected rows
+        $res = [];
+        $query = 'SELECT * FROM TEST.ADI_NONATE_TYPE_1 WHERE BOARD IN ("'.implode('","', $boards).'")';
+        $result = ExecuteIQuery($query,$iConRLM);
+        while($row = mysqli_fetch_assoc($result)){
+            array_push($res, $row);
+        }
+        return $res;
+        
+        // $query = 'DELETE FROM TEST.ADI_NONATE_TYPE_1 WHERE BOARD IN ("'.implode('","', $boards).'")';
+        // $result = ExecuteIQuery($query,$iConRLM);
+        // return $result;
     }
 
 ?>
