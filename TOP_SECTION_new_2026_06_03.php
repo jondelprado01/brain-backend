@@ -626,7 +626,7 @@ function GET_OEE_OVERRIDE($iConRLM, $retrieve_data, $setup_type = null){
 		array_push($oeeo_id, $row['OEEO_ID']);
 	}
 
-	// $latest_override = 'SELECT * FROM BRAIN.OEE_OVERRIDE_MAIN_HIST WHERE OEEO_ID IN ("'.implode('","', $oeeo_id).'") AND (CHANGE_TYPE = "NEW_OVERRIDE" OR CHANGE_TYPE = "UPDATE_OVERRIDE") ORDER BY CHANGE_DT ASC';
+	// $latest_override = 'SELECT * FROM BRAIN.OEE_OVERRIDE_MAIN_HIST WHERE OEEO_ID IN ("'.implode('","', $oeeo_id).'") AND (CHANGE_TYPE = "NEW_OVERRIDE" OR CHANGE_TYPE = "UPDATE_OVERRIDE") ORDER BY CHANGE_DT DESC LIMIT 1';
 	$latest_override = 'SELECT OOMH.*
 					FROM BRAIN.OEE_OVERRIDE_MAIN_HIST OOMH
 					JOIN (
@@ -659,7 +659,7 @@ function GET_OEE_OVERRIDE($iConRLM, $retrieve_data, $setup_type = null){
 			}
 			array_push($identifier, $criteria);
 		}
-		
+
 		foreach ($retrieve_data as $rkey => $rd) {
 			$oee_val_arr = [];
 			foreach ($identifier as $idtf) {
@@ -724,9 +724,9 @@ function GET_OEE_OVERRIDE($iConRLM, $retrieve_data, $setup_type = null){
 	else{
 		$return_data = $retrieve_data;
 	}
-	
+
 	if ($setup_type == null) {
-	//RETRIEVE ACTUAL PRIO CD
+		//RETRIEVE ACTUAL PRIO CD
 		foreach ($return_data as $key => $rd) {
 			// FOR RETRIEVING PRIO BY HASH
 			$new_prio = "";
@@ -737,7 +737,7 @@ function GET_OEE_OVERRIDE($iConRLM, $retrieve_data, $setup_type = null){
 			while($row = mysqli_fetch_assoc($get_prio_cd_res)){
 				$new_prio = $row['NEW_PRIO'];
 			}
-
+	
 			$return_data[$key]['PRIO_CD'] = $new_prio;
 			$return_data[$key]['ORIG_PRIO'] = $rd['PRIO_CD'];
 		}
@@ -807,7 +807,7 @@ function GET_DEDICATION($iConRLM, $data){
 	}
 
 	$result = GET_OEE_OVERRIDE($iConRLM, $result, "DEDICATION");
-
+	
 	$identifier_arr = array_map(function($item) {
     	return $item['IDENTIFIER'];
 	}, $result);
