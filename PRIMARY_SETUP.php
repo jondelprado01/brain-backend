@@ -630,7 +630,7 @@ function SET_DEDICATION($iConRLM, $data, $user_details){
         
         $insert_ded_details = 'INSERT INTO TEST.ADI_DEDICATION VALUES ("", "'.$dt['ATOM_MASTER_ID'].'", "'.$dt['MFG_PART_NUM'].'", "'.$dt['SITE_NUM'].'", "'.$dt['STEP_NM'].'", "'.$dt['DETAILS'][5].'", 
                               "'.$dt['DETAILS'][6].'", "'.$dt['DETAILS'][7].'", "'.$dt['DETAILS'][8].'", "'.$dt['DETAILS'][9].'", "'.$dt['DETAILS'][10].'", "'.$dt['DETAILS'][11].'", "'.$dt['ENGR_TESTER'].'", "'.$dt['ENGR_HANDLER'].'", 
-                              "'.$dt['PRIO_CD'].'", "'.$dt['EXCLUSIVE'].'", "'.implode(',', $flag_id).'", "'.$dt['TYPE'].'", "'.$dt['PARENT_TABLE'].'")';
+                              "'.$dt['PRIO_CD'].'", "'.$dt['EXCLUSIVE'].'", "'.implode(',', $flag_id).'", "'.$dt['TYPE'].'", "'.$dt['PARENT_TABLE'].'", "'.$dt['RES_AREA'].'", "'.$dt['TEMP_CLASS'].'")';
 
         $insert_ded_details_res = ExecuteIQuery($insert_ded_details,$iConRLM);
 
