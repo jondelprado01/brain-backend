@@ -276,9 +276,11 @@
         $strSQL = '
             SELECT DISTINCT
             BOARD_NAME BURNIN_BOARD,
+            PROCESS_AREA HW_TYPE,
             MIN(SOCKET_EFFICIENCY) SOCKET_EFFICIENCY
             FROM BODS_JDA_STAGE.V_BI_ATTR
             WHERE BOARD_NAME LIKE "'.$data.'%"';
+        #2026-06-08 JDP, added "PROCESS_AREA HW_TYPE" column (hw_type requirement in type 2 datatable/ui)
         #2026-06-02 RM now referencing only bods_jda_stage.v_bi_attr
         /*old
         $query = 'SELECT DISTINCT
@@ -289,10 +291,12 @@
         */
         $res_query = ExecuteIQuery($strSQL,$iConRLM);
         while($row = mysqli_fetch_assoc($res_query)){
-            $row['SOCKET_EFFICIENCY'] = '95';
-            $string = $row['BURNIN_BOARD']."|".$row['SOCKET_EFFICIENCY'];
-            $row['SEID'] = hash("sha256", $string);
-            array_push($result, $row);
+            if ($row['BURNIN_BOARD'] != null) { #2026-06-08 JDP, basic checker for non-existing bi_board
+                $row['SOCKET_EFFICIENCY'] = '95';
+                $string = $row['BURNIN_BOARD']."|".$row['SOCKET_EFFICIENCY'];
+                $row['SEID'] = hash("sha256", $string);
+                array_push($result, $row);
+            }
         }
         return $result;
     }
@@ -315,19 +319,19 @@
         foreach ($data as $key => $dt) {
 
             $is_exists = 0;
-            $check_rec = 'SELECT COUNT(*) FROM TEST.ADI_NONATE_TYPE_2 WHERE HASH = "'.$dt[2].'"';
+            $check_rec = 'SELECT COUNT(*) FROM TEST.ADI_NONATE_TYPE_2 WHERE HASH = "'.$dt[3].'"';
             $res_check_rec = ExecuteIQuery($check_rec,$iConRLM);
             while($row = mysqli_fetch_assoc($res_check_rec)){
                 $is_exists = $row['COUNT(*)'];
             }
 
             if ($is_exists > 0) {
-                $update_query = 'UPDATE TEST.ADI_NONATE_TYPE_2 SET SOCKET_EFFICIENCY = "'.$dt[1].'", UPDATED_AT = "'.$curdate.'", UPDATED_BY = "'.$user['emp_name'].'" WHERE HASH = "'.$dt[2].'" ';
+                $update_query = 'UPDATE TEST.ADI_NONATE_TYPE_2 SET SOCKET_EFFICIENCY = "'.$dt[2].'", UPDATED_AT = "'.$curdate.'", UPDATED_BY = "'.$user['emp_name'].'" WHERE HASH = "'.$dt[3].'" ';
                 $result = ExecuteIQuery($update_query,$iConRLM);
                 array_push($change_log, $dt);
             }
             else{
-                $query = 'INSERT INTO TEST.ADI_NONATE_TYPE_2 VALUES ("", "'.$dt[0].'", "'.$dt[1].'", "'.$dt[2].'", "'.$curdate.'", "'.$user['emp_name'].'", "", "")';
+                $query = 'INSERT INTO TEST.ADI_NONATE_TYPE_2 VALUES ("", "'.$dt[0].'", "'.$dt[1].'", "'.$dt[2].'", "'.$dt[3].'", "'.$curdate.'", "'.$user['emp_name'].'", "", "")';
                 $result = ExecuteIQuery($query,$iConRLM);
 
                 $get_id = 'SELECT LAST_INSERT_ID()';
