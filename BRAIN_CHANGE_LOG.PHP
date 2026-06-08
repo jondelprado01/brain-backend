@@ -267,7 +267,7 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
             $iden_field = ["MFG_PART_NUM", "BOARD", "BI_HOURS", "ID"];
 
             $iden_payload = array_map(function ($row) {
-                unset($row[3], $row[4], $row[5], $row[6], $row[7]);
+                unset($row[3], $row[4], $row[5], $row[6], $row[7], $row[8]);
                 return array_values($row);
             }, $payload);
 
@@ -278,14 +278,14 @@ function ADD_LOG($iConRLM, $payload, $user_details, $module, $old_data_payload){
             $info_field = ["LOAD_HOURS", "LOAD_UNLOAD", "TURNS_PER_WEEK", "ID"];
 
             $info_payload = array_map(function ($row) {
-                unset($row[0], $row[1], $row[2], $row[6], $row[7]);
+                unset($row[0], $row[1], $row[2], $row[6], $row[7], $row[8]);
                 return array_values($row);
             }, $payload);
 
             $old_data_payload = [];
 
             foreach ($payload as $key => $pld) {
-                $id = $pld[8];
+                $id = $pld[9];
                 $old_data = json_decode($pld[7]);
                 array_push($old_data_payload, [
                     $old_data[3],
