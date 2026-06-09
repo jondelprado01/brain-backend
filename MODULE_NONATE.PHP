@@ -144,7 +144,8 @@
                     MFG_PART_NUM,
                     BURNIN_BOARD.HW_NM BURNIN_BOARD,
                     IFNULL(BURNIN_HOURS_1.ATTR_VAL_NUM,BURNIN_HOURS_1.ATTR_VAL_CHAR) BURNIN_HOURS_1,
-                    BURNIN_TYPE.ATTR_VAL_CHAR BURNIN_TYPE
+                    BURNIN_BOARD.HW_TYPE BURNIN_TYPE #2026_06_08 JDP, utilized hw_type column of BURNIN_BOARD.HW_TYPE table (temporary only, need confirmation from reyn)
+                    #BURNIN_TYPE.ATTR_VAL_CHAR BURNIN_TYPE
                     FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA
                     INNER JOIN BODS_JDA_ADI_EXPORT.HARDWARE_SET BURNIN_BOARD ON AAA.HW_SET_ID = BURNIN_BOARD.HW_SET_ID AND BURNIN_BOARD.HW_TYPE = "BURNIN_BOARD"
                     LEFT JOIN BODS_JDA_ADI_EXPORT.RESOURCE_ATTR BURNIN_HOURS_1 ON AAA.ATTR_SET_ID = BURNIN_HOURS_1.ATTR_SET_ID AND BURNIN_HOURS_1.ATTR_NM = "BURNIN_HOURS_1"
@@ -158,7 +159,8 @@
                 MFG_PART_NUM,
                 BOARD_NAME BURNIN_BOARD,
                 PROCESS_HOURS BURNIN_HOURS_1,
-                NULL BURNIN_TYPE
+                PROCESS_AREA BURNIN_TYPE #2026_06_08 JDP, utilized process_area column of BODS_JDA_STAGE.V_BI_ATTR table (temporary only, need confirmation from reyn)
+                #NULL BURNIN_TYPE
                 FROM BODS_JDA_STAGE.V_BI_ATTR
                 WHERE BOARD_NAME LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%" OR MFG_PART_NUM LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%"';
 
@@ -238,19 +240,19 @@
         foreach ($data as $key => $dt) {
 
             $is_exists = 0;
-            $check_rec = 'SELECT COUNT(*) FROM TEST.ADI_NONATE_TYPE_1 WHERE HASH = "'.$dt[6].'"';
+            $check_rec = 'SELECT COUNT(*) FROM TEST.ADI_NONATE_TYPE_1 WHERE HASH = "'.$dt[7].'"';
             $res_check_rec = ExecuteIQuery($check_rec,$iConRLM);
             while($row = mysqli_fetch_assoc($res_check_rec)){
                 $is_exists = $row['COUNT(*)'];
             }
 
             if ($is_exists > 0) {
-                $update_query = 'UPDATE TEST.ADI_NONATE_TYPE_1 SET LOAD_HOURS = "'.$dt[3].'", LOAD_UNLOAD = "'.$dt[4].'", UPDATED_AT = "'.$curdate.'", UPDATED_BY = "'.$user['emp_name'].'" WHERE HASH = "'.$dt[6].'" ';
+                $update_query = 'UPDATE TEST.ADI_NONATE_TYPE_1 SET LOAD_HOURS = "'.$dt[3].'", LOAD_UNLOAD = "'.$dt[4].'", UPDATED_AT = "'.$curdate.'", UPDATED_BY = "'.$user['emp_name'].'" WHERE HASH = "'.$dt[7].'" ';
                 $result = ExecuteIQuery($update_query,$iConRLM);
                 array_push($change_log, $dt);
             }
             else{
-                $query = 'INSERT INTO TEST.ADI_NONATE_TYPE_1 VALUES ("", "'.$dt[0].'", "'.$dt[1].'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[4].'", "'.$dt[6].'", "'.$curdate.'", "'.$user['emp_name'].'", "", "")';
+                $query = 'INSERT INTO TEST.ADI_NONATE_TYPE_1 VALUES ("", "'.$dt[0].'", "'.$dt[1].'", "'.$dt[6].'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[4].'", "'.$dt[7].'", "'.$curdate.'", "'.$user['emp_name'].'", "", "")';
                 $result = ExecuteIQuery($query,$iConRLM);
 
                 $get_id = 'SELECT LAST_INSERT_ID()';
