@@ -133,6 +133,7 @@
         //         WHERE BURNIN_BOARD.HW_NM LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%" OR MFG_PART_NUM LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%"
         //         HAVING BURNIN_BOARD IS NOT NULL OR BURNIN_HOURS_1 IS NOT NULL OR BURNIN_TYPE IS NOT NULL';
         
+        #2026-06-11 JDP, added condition for HW_TYPE (concat "_BOARD")
         $query = 'SELECT
                 MFG_PART_NUM,
                 COALESCE(BURNIN_BOARD) BURNIN_BOARD,
@@ -144,8 +145,11 @@
                     MFG_PART_NUM,
                     BURNIN_BOARD.HW_NM BURNIN_BOARD,
                     IFNULL(BURNIN_HOURS_1.ATTR_VAL_NUM,BURNIN_HOURS_1.ATTR_VAL_CHAR) BURNIN_HOURS_1,
-                    BURNIN_BOARD.HW_TYPE BURNIN_TYPE #2026_06_08 JDP, utilized hw_type column of BURNIN_BOARD.HW_TYPE table (temporary only, need confirmation from reyn)
-                    #BURNIN_TYPE.ATTR_VAL_CHAR BURNIN_TYPE
+                    CASE 
+                        WHEN BURNIN_BOARD.HW_TYPE = "BURNIN" 
+                        THEN CONCAT(BURNIN_BOARD.HW_TYPE, "_BOARD")
+                        ELSE BURNIN_BOARD.HW_TYPE
+                    END AS BURNIN_TYPE
                     FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA
                     INNER JOIN BODS_JDA_ADI_EXPORT.HARDWARE_SET BURNIN_BOARD ON AAA.HW_SET_ID = BURNIN_BOARD.HW_SET_ID AND BURNIN_BOARD.HW_TYPE = "BURNIN_BOARD"
                     LEFT JOIN BODS_JDA_ADI_EXPORT.RESOURCE_ATTR BURNIN_HOURS_1 ON AAA.ATTR_SET_ID = BURNIN_HOURS_1.ATTR_SET_ID AND BURNIN_HOURS_1.ATTR_NM = "BURNIN_HOURS_1"
@@ -159,7 +163,11 @@
                 MFG_PART_NUM,
                 BOARD_NAME BURNIN_BOARD,
                 PROCESS_HOURS BURNIN_HOURS_1,
-                PROCESS_AREA BURNIN_TYPE #2026_06_08 JDP, utilized process_area column of BODS_JDA_STAGE.V_BI_ATTR table (temporary only, need confirmation from reyn)
+                CASE 
+                    WHEN PROCESS_AREA = "BURNIN" 
+                    THEN CONCAT(PROCESS_AREA, "_BOARD")
+                    ELSE PROCESS_AREA
+                END AS BURNIN_TYPE
                 #NULL BURNIN_TYPE
                 FROM BODS_JDA_STAGE.V_BI_ATTR
                 WHERE BOARD_NAME LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%" OR MFG_PART_NUM LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%"';
@@ -278,10 +286,15 @@
         $strSQL = '
             SELECT DISTINCT
             BOARD_NAME BURNIN_BOARD,
-            PROCESS_AREA HW_TYPE,
+            CASE 
+                WHEN PROCESS_AREA = "BURNIN" 
+                THEN CONCAT(PROCESS_AREA, "_BOARD")
+                ELSE PROCESS_AREA
+            END AS HW_TYPE,
             MIN(SOCKET_EFFICIENCY) SOCKET_EFFICIENCY
             FROM BODS_JDA_STAGE.V_BI_ATTR
             WHERE BOARD_NAME LIKE "'.$data.'%"';
+        #2026-06-11 JDP, added condition for HW_TYPE (concat "_BOARD")
         #2026-06-08 JDP, added "PROCESS_AREA HW_TYPE" column (hw_type requirement in type 2 datatable/ui)
         #2026-06-02 RM now referencing only bods_jda_stage.v_bi_attr
         /*old
