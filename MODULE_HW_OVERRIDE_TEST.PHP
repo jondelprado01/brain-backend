@@ -44,13 +44,13 @@
             print_r(json_encode(SEARCH_NON_BOARD($iConRLM, $_POST['payload'], $_POST['limit'])));
             break;
         case 'GET_DUMMY_HW':
-            print_r(json_encode(GET_DUMMY_HW($iConRLM)));
+            print_r(json_encode(GET_DUMMY_HW($iConRLM, $aryRequest)));
             break;
         case 'GET_HW_CAPACITY':
-            print_r(json_encode(GET_HW_CAPACITY($iConRLM)));
+            print_r(json_encode(GET_HW_CAPACITY($iConRLM, $aryRequest)));
             break;
         case 'GET_NON_BOARD':
-            print_r(json_encode(GET_NON_BOARD($iConRLM)));
+            print_r(json_encode(GET_NON_BOARD($iConRLM, $aryRequest)));
             break;
         case 'GET_WEEKS':
             print_r(json_encode(GET_WEEKS($iConRLM)));
@@ -219,7 +219,7 @@
                         CA_VALUE HW_TYPE
                         FROM ADI_ESLDATA.CUSTOM_ACTION CA
                         INNER JOIN ADI_ESLDATA.CUSTOM_ACTION_IDEN CAI ON CA.CA_ID = CAI.CA_ID
-                        WHERE CA.CA_NAME = "HWTYPE_PLANNABLE"
+                        WHERE CA.CA_NAME = "HWTYPE_PLANNABLE_BRAIN"
                         HAVING HW_TYPE NOT IN ("BURNIN_BOARD")
                         ORDER BY HW_TYPE';
 
@@ -543,9 +543,19 @@
         return $result;
     }
 
-    function GET_DUMMY_HW($iConRLM){
+    function GET_DUMMY_HW($iConRLM, $aryRequest){
+
+        $request = (array) json_decode($aryRequest['INPUT']);
+        $filter_query = GENERATE_FILTER_QUERY($request);
+        
+        if ($filter_query != "") {
+            $get_dummy = 'SELECT * FROM TEST.ADI_HW_OVERRIDE_TYPE_1 '.$filter_query.'';
+        }
+        else{
+            $get_dummy = 'SELECT * FROM TEST.ADI_HW_OVERRIDE_TYPE_1 WHERE CREATED_BY = "'.$request['EMP_NAME'].'" ORDER BY CREATED_AT DESC';
+        }
+            
         $dummy_arr = [];
-        $get_dummy = 'SELECT * FROM TEST.ADI_HW_OVERRIDE_TYPE_1 ORDER BY CREATED_AT DESC';
         $res_dummy = ExecuteIQuery($get_dummy,$iConRLM);
         while($row = mysqli_fetch_assoc($res_dummy)){
             array_push($dummy_arr, $row);
@@ -553,9 +563,19 @@
         return $dummy_arr;
     }
 
-    function GET_HW_CAPACITY($iConRLM){
+    function GET_HW_CAPACITY($iConRLM, $aryRequest){
+        
+        $request = (array) json_decode($aryRequest['INPUT']);
+        $filter_query = GENERATE_FILTER_QUERY($request);
+        
+        if ($filter_query != "") {
+            $get_capacity = 'SELECT * FROM TEST.ADI_HW_OVERRIDE_TYPE_2 '.$filter_query.'';
+        }
+        else{
+            $get_capacity = 'SELECT * FROM TEST.ADI_HW_OVERRIDE_TYPE_2 WHERE CREATED_BY = "'.$request['EMP_NAME'].'" ORDER BY CREATED_AT DESC';
+        }
+
         $capacity_arr = [];
-        $get_capacity = 'SELECT * FROM TEST.ADI_HW_OVERRIDE_TYPE_2 ORDER BY CREATED_AT DESC';
         $res_capacity = ExecuteIQuery($get_capacity,$iConRLM);
         while($row = mysqli_fetch_assoc($res_capacity)){
             array_push($capacity_arr, $row);
@@ -563,9 +583,19 @@
         return $capacity_arr;
     }
 
-    function GET_NON_BOARD($iConRLM){
+    function GET_NON_BOARD($iConRLM, $aryRequest){
+
+        $request = (array) json_decode($aryRequest['INPUT']);
+        $filter_query = GENERATE_FILTER_QUERY($request);
+        
+        if ($filter_query != "") {
+            $get_nonboard = 'SELECT * FROM TEST.ADI_HW_OVERRIDE_TYPE_3 '.$filter_query.'';
+        }
+        else{
+            $get_nonboard = 'SELECT * FROM TEST.ADI_HW_OVERRIDE_TYPE_3 WHERE CREATED_BY = "'.$request['EMP_NAME'].'" ORDER BY CREATED_AT DESC';
+        }
+
         $nonboard_arr = [];
-        $get_nonboard = 'SELECT * FROM TEST.ADI_HW_OVERRIDE_TYPE_3 ORDER BY CREATED_AT DESC';
         $res_nonboard = ExecuteIQuery($get_nonboard,$iConRLM);
         while($row = mysqli_fetch_assoc($res_nonboard)){
             array_push($nonboard_arr, $row);
@@ -931,6 +961,296 @@
             array_push($week_arr, $row['FYWW']);
         }
         return $week_arr;
+    }
+
+    function GENERATE_FILTER_QUERY($request){
+        $result = "";
+        $res_arr = [];
+        if (!isset($request['tab']) || $request['tab'] == "type-1") {
+            
+            $wildcard_val = array_values(array_intersect(array_keys($request), ["MFG_PART_NUM", "GENPOOL_HW", "HW_NAME"]));
+            if(count($wildcard_val) > 0){
+                foreach ($wildcard_val as $wvkey => $wildcard) {
+                    if (isset($request[$wildcard]) && count($request[$wildcard]) > 0) {
+                        $wc_clause = "";
+                        $req_wc = explode(",", $request[$wildcard]);
+                        $req_wc_len = count($req_wc);
+                        $wc_i = 0;
+                        if ($req_wc_len > 0) {
+                            $wc_wildcard = "";
+                            $wcw_separator = " OR ";
+                            foreach ($req_wc as $wckey => $wc) {
+                                $wc_i++;
+                                if ($wc_i == $req_wc_len) {
+                                    $wcw_separator = "";
+                                }
+                                
+                                if ($wildcard == "HW_NAME") {
+                                    $wildcard = "HW_NM";
+                                }
+                                elseif ($wildcard == "GENPOOL_HW") {
+                                    $wildcard = "GENPOOL";
+                                }
+
+                                $wc_wildcard .= ''.$wildcard.' LIKE "'.$wc.'%"'.$wcw_separator.'';
+                            }
+
+                            $wc_clause = $wc_wildcard;
+                            array_push($res_arr, $wc_clause);
+                        }
+                    }
+                    else{
+                        continue;
+                    }
+                }
+            }
+
+            // //exact value filter
+            $exact_val = array_values(array_intersect(array_keys($request), ["MAPPING_TYPE"]));
+            if (count($exact_val) > 0) {
+                foreach ($exact_val as $evkey => $exact) {
+                    if (isset($request[$exact]) && count($request[$exact]) > 0) {
+                        $req_ev = explode(",", $request[$exact]);
+                        if (count($req_ev) > 1) {
+                            $ev_clause = 'HW_TYPE IN ("'.implode('","', $req_ev).'")';
+                        }
+                        else{
+                            $ev_clause = 'HW_TYPE = "'.$req_ev[0].'"';
+                        }
+                        array_push($res_arr, $ev_clause);
+                    }
+                    else{
+                        continue;
+                    }
+                }
+            }
+
+            $range_val = array_values(array_intersect(array_keys($request), ["EFF_START", "EFF_END", "JDA_FEED"]));
+            if (count($range_val) > 0) {
+                foreach ($range_val as $rvkey => $range) {
+
+                    if (in_array($range, ["EFF_START", "EFF_END"])) {
+                        $rv_clause = "";
+                        $req_rv = explode(",", $request[$range]);
+                        $min_rv = str_replace("_W", "", $req_rv[0]);
+                        $max_rv = (count($req_rv) > 1) ? str_replace("_W", "", $req_rv[1]) : "";
+
+                        if ($max_rv != "") {
+                            $rv_clause = 'CAST(REPLACE('.$range.', "_W", "") AS UNSIGNED) BETWEEN '.$min_rv.' AND '.$max_rv.'';
+                        }
+                        else{
+                            $rv_clause = ''.$range.' = "'.$req_rv[0].'"';
+                        }
+                        array_push($res_arr, $rv_clause);
+                    }
+                    else{
+                        $rv_clause = "";
+                        $req_rv = explode(",", $request[$range]);
+                        $min_rv = $req_rv[0];
+                        $max_rv = (count($req_rv) > 1) ? $req_rv[1] : "";
+                        $range = "CAPACITY";
+
+                        if ($max_rv != "") {
+                            $rv_clause = ''.$range.' BETWEEN '.$min_rv.' AND '.$max_rv.'';
+                        }
+                        else{
+                            $rv_clause = ''.$range.' = '.$min_rv.'';
+                        }
+                        array_push($res_arr, $rv_clause);
+                    }
+                }
+            }
+
+            //exact value - datetype filter
+            if (isset($request['DATE_STATUS']) && $request['DATE_STATUS'] != "") {
+                if ($request['DATE_STATUS'] != "ALL") {
+                    $ds_explode = explode("_", $request['DATE_STATUS']);
+                    $ds_type = $ds_explode[0];
+                    $curr_fyww = (int)substr($ds_explode[1], 2);
+                    $sign = ($ds_type == "VALID") ? ">=" : "<";
+                    $ds_clause = 'CAST(REPLACE(EFF_END, "_W", "") AS UNSIGNED) '.$sign.' '.$curr_fyww.'';
+                    array_push($res_arr, $ds_clause);
+                }
+            }
+
+        }
+        elseif ($request['tab'] == "type-2") {
+            if (isset($request['HW_NAME']) && $request['HW_NAME'] != "") {
+                $hw_clause = "";
+                $req_hw = explode(",", $request['HW_NAME']);
+                $req_hw_len = count($req_hw);
+                $hw_i = 0;
+                if ($req_hw_len > 0) {
+                    $hw_wildcard = "";
+                    $hww_separator = " OR ";
+                    foreach ($req_hw as $hwkey => $hw) {
+                        $hw_i++;
+                        if ($hw_i == $req_hw_len) {
+                            $hww_separator = "";
+                        }
+                        $hw_wildcard .= 'HW_NM LIKE "'.$hw.'%"'.$hww_separator.'';
+                    }
+                    // $hw_clause = 'HW_NM IN ("'.implode('","', $req_hw).'") OR ('.$hw_wildcard.')';
+                    $hw_clause = $hw_wildcard;
+                    array_push($res_arr, $hw_clause);
+                }
+            }
+
+            // //exact value filter
+            $exact_val = array_values(array_intersect(array_keys($request), ["SITE_NUM", "RES_AREA", "HW_TYPE"]));
+            if (count($exact_val) > 0) {
+                foreach ($exact_val as $evkey => $exact) {
+                    if (isset($request[$exact]) && count($request[$exact]) > 0) {
+                        $req_ev = explode(",", $request[$exact]);
+                        if (count($req_ev) > 1) {
+                            $ev_clause = ''.$exact.' IN ("'.implode('","', $req_ev).'")';
+                        }
+                        else{
+                            $ev_clause = ''.$exact.' = "'.$req_ev[0].'"';
+                        }
+                        array_push($res_arr, $ev_clause);
+                    }
+                    else{
+                        continue;
+                    }
+                }
+            }
+
+            //range value filter
+            $range_val = array_values(array_intersect(array_keys($request), ["EFF_START", "EFF_END", "OVERRIDE_CAP", "HMS_COUNT"]));
+            if (count($range_val) > 0) {
+                foreach ($range_val as $rvkey => $range) {
+
+                    if (in_array($range, ["EFF_START", "EFF_END"])) {
+                        $rv_clause = "";
+                        $req_rv = explode(",", $request[$range]);
+                        $min_rv = str_replace("_W", "", $req_rv[0]);
+                        $max_rv = (count($req_rv) > 1) ? str_replace("_W", "", $req_rv[1]) : "";
+
+                        if ($max_rv != "") {
+                            $rv_clause = 'CAST(REPLACE('.$range.', "_W", "") AS UNSIGNED) BETWEEN '.$min_rv.' AND '.$max_rv.'';
+                        }
+                        else{
+                            $rv_clause = ''.$range.' = "'.$req_rv[0].'"';
+                        }
+                        array_push($res_arr, $rv_clause);
+                    }
+                    else{
+                        $rv_clause = "";
+                        $req_rv = explode(",", $request[$range]);
+                        $min_rv = $req_rv[0];
+                        $max_rv = (count($req_rv) > 1) ? $req_rv[1] : "";
+                        $range = ($range == "HMS_COUNT") ? "CURRENT_CAP" : $range;
+
+                        if ($max_rv != "") {
+                            $rv_clause = ''.$range.' BETWEEN '.$min_rv.' AND '.$max_rv.'';
+                        }
+                        else{
+                            $rv_clause = ''.$range.' = '.$min_rv.'';
+                        }
+                        array_push($res_arr, $rv_clause);
+                    }
+                }
+            }
+
+            //exact value - datetype filter
+            if (isset($request['DATE_STATUS']) && $request['DATE_STATUS'] != "") {
+                if ($request['DATE_STATUS'] != "ALL") {
+                    $ds_explode = explode("_", $request['DATE_STATUS']);
+                    $ds_type = $ds_explode[0];
+                    $curr_fyww = (int)substr($ds_explode[1], 2);
+                    $sign = ($ds_type == "VALID") ? ">=" : "<";
+                    $ds_clause = 'CAST(REPLACE(EFF_START, "_W", "") AS UNSIGNED) '.$sign.' '.$curr_fyww.'';
+                    array_push($res_arr, $ds_clause);
+                }
+            }
+        }
+        else{
+            if (isset($request['HW_NAME']) && $request['HW_NAME'] != "") {
+                $hw_clause = "";
+                $req_hw = explode(",", $request['HW_NAME']);
+                $req_hw_len = count($req_hw);
+                $hw_i = 0;
+                if ($req_hw_len > 0) {
+                    $hw_wildcard = "";
+                    $hww_separator = " OR ";
+                    foreach ($req_hw as $hwkey => $hw) {
+                        $hw_i++;
+                        if ($hw_i == $req_hw_len) {
+                            $hww_separator = "";
+                        }
+                        $hw_wildcard .= 'HW_NAME LIKE "'.$hw.'%"'.$hww_separator.'';
+                    }
+                    // $hw_clause = 'HW_NM IN ("'.implode('","', $req_hw).'") OR ('.$hw_wildcard.')';
+                    $hw_clause = $hw_wildcard;
+                    array_push($res_arr, $hw_clause);
+                }
+            }
+
+            // //exact value filter
+            $exact_val = array_values(array_intersect(array_keys($request), ["SITE_NUM", "RES_AREA", "HW_TYPE"]));
+            if (count($exact_val) > 0) {
+                foreach ($exact_val as $evkey => $exact) {
+                    if (isset($request[$exact]) && count($request[$exact]) > 0) {
+                        $req_ev = explode(",", $request[$exact]);
+                        if (count($req_ev) > 1) {
+                            $ev_clause = ''.$exact.' IN ("'.implode('","', $req_ev).'")';
+                        }
+                        else{
+                            $ev_clause = ''.$exact.' = "'.$req_ev[0].'"';
+                        }
+                        array_push($res_arr, $ev_clause);
+                    }
+                    else{
+                        continue;
+                    }
+                }
+            }
+
+            //range value filter
+            $range_val = array_values(array_intersect(array_keys($request), ["HMS_COUNT"]));
+            if (count($range_val) > 0) {
+                foreach ($range_val as $rvkey => $range) {
+                    if (in_array($range, ["HMS_COUNT"])) {
+                        $rv_clause = "";
+                        $req_rv = explode(",", $request[$range]);
+                        $min_rv = $req_rv[0];
+                        $max_rv = (count($req_rv) > 1) ? $req_rv[1] : "";
+                        $range = ($range == "HMS_COUNT") ? "CURRENT_CAP" : $range;
+
+                        if ($max_rv != "") {
+                            $rv_clause = ''.$range.' BETWEEN '.$min_rv.' AND '.$max_rv.'';
+                        }
+                        else{
+                            $rv_clause = ''.$range.' = '.$min_rv.'';
+                        }
+                        array_push($res_arr, $rv_clause);
+                    }
+                }
+            }
+        }
+        
+        if (count($res_arr) > 0) {
+            $result = "WHERE ".implode(" AND ", $res_arr);
+        }
+
+        if (isset($request['CREATED_BY']) && $request['CREATED_BY'] != "") {
+            $where_clause = ($result != "") ? " AND " : "WHERE ";
+
+            if (!in_array($request['CREATED_BY'], ["OTHERS", "ALL"])) {
+                $result .= ''.$where_clause.'CREATED_BY = "'.$request['CREATED_BY'].'"';
+            }
+            else{
+                if($request['CREATED_BY'] == "OTHERS"){
+                    $result .= ''.$where_clause.'CREATED_BY != "'.$request['CREATED_BY'].'"';
+                }
+                else {
+                    $result .= ' ORDER BY CREATED_AT DESC';
+                }
+            }
+        }
+
+        return $result;
     }
 ?>
 
