@@ -1238,11 +1238,11 @@
             $where_clause = ($result != "") ? " AND " : "WHERE ";
 
             if (!in_array($request['CREATED_BY'], ["OTHERS", "ALL"])) {
-                $result .= ''.$where_clause.'CREATED_BY = "'.$request['CREATED_BY'].'"';
+                $result .= ''.$where_clause.'CREATED_BY = "'.$request['EMP_NAME'].'"';
             }
             else{
                 if($request['CREATED_BY'] == "OTHERS"){
-                    $result .= ''.$where_clause.'CREATED_BY != "'.$request['CREATED_BY'].'"';
+                    $result .= ''.$where_clause.'CREATED_BY != "'.$request['EMP_NAME'].'"';
                 }
                 else {
                     $result .= ' ORDER BY CREATED_AT DESC';
