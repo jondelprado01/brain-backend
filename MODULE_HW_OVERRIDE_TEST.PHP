@@ -1193,6 +1193,7 @@
                 foreach ($exact_val as $evkey => $exact) {
                     if (isset($request[$exact]) && count($request[$exact]) > 0) {
                         $req_ev = explode(",", $request[$exact]);
+                        $exact = ($exact == "HW_TYPE") ? "HW_TYPE_HMS" : $exact;
                         if (count($req_ev) > 1) {
                             $ev_clause = ''.$exact.' IN ("'.implode('","', $req_ev).'")';
                         }
