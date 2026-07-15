@@ -30,7 +30,7 @@
     }
 
     if ($process == "SET_OVERRIDE") {
-        print_r(json_encode(SET_OVERRIDE($iConRLM, $_POST['common_data'])));
+        print_r(json_encode(SET_OVERRIDE($iConRLM, $_POST['common_data'], $_POST['user_details'])));
     }
     elseif ($process == "GET_OVERRIDE") {
         print_r(json_encode(GET_OVERRIDE($iConRLM, $_POST['common_data'])));
@@ -85,7 +85,7 @@
         return $return_res;
     }
 
-    function SET_OVERRIDE($iConRLM, $common){
+    function SET_OVERRIDE($iConRLM, $common, $user_details){
         $result     = array(array());
         $return_res = "";
         foreach ($common as $key => $values) {
@@ -129,7 +129,7 @@
                     $change_type = ($override != null || $override != '') ? "UPDATE_OVERRIDE" : "DELETE_OVERRIDE";
                     $oee_val = ($change_type == "UPDATE_OVERRIDE") ? $override : $check['OEE_VAL'];
                     $update_oee_history = 'INSERT INTO BRAIN.OEE_OVERRIDE_MAIN_HIST VALUES ("'.$check['OEEO_ID'].'", "'.$check['SHA1_ROW_VALUE'].'", "'.$check['SITE_NUM'].'", "'.$check['RES_AREA'].'", 
-                                                "'.$check['TESTER'].'", "'.$check['HANDLER'].'", "'.$check['TEMP_CLASS'].'", "'.$oee_val.'", "'.date('Y-m-d H:i:s').'", "ADMIN", "'.$change_type.'")';
+                                                "'.$check['TESTER'].'", "'.$check['HANDLER'].'", "'.$check['TEMP_CLASS'].'", "'.$oee_val.'", "'.date('Y-m-d H:i:s').'", "'.$user_details.'", "'.$change_type.'")';
                     $update_oee_history_res = ExecuteIQuery($update_oee_history, $iConRLM);
 
                     if ($override != null || $override != '') {
@@ -142,7 +142,7 @@
                         $get_oee_part_res = ExecuteIQuery($get_oee_part, $iConRLM);
 
                         while($row = mysqli_fetch_assoc($get_oee_part_res)){
-                            $update_part_history = 'INSERT INTO BRAIN.OEE_OVERRIDE_PART_HIST VALUES ("'.$row['OEEO_ID'].'", "'.$row['MFG_PART_NUM'].'", "'.date('Y-m-d H:i:s').'", "ADMIN", "DELETE_OVERRIDE_PART")';
+                            $update_part_history = 'INSERT INTO BRAIN.OEE_OVERRIDE_PART_HIST VALUES ("'.$row['OEEO_ID'].'", "'.$row['MFG_PART_NUM'].'", "'.date('Y-m-d H:i:s').'", "'.$user_details.'", "DELETE_OVERRIDE_PART")';
                             $update_part_history_res = ExecuteIQuery($update_part_history, $iConRLM);
                         }
 
@@ -165,7 +165,7 @@
                 $get_oee_id_res = ExecuteIQuery($get_oee_id, $iConRLM);
                 while($row = mysqli_fetch_assoc($get_oee_id_res)){
                     $insert_oee_history = 'INSERT INTO BRAIN.OEE_OVERRIDE_MAIN_HIST VALUES ("'.$row['LAST_INSERT_ID()'].'", '.$sha1.', "'.$site_num.'", "'.$res_area.'", "'.$tester.'", "'.$handler.'", "'.$temp.'", "'.$override.'",
-                                          "'.date('Y-m-d H:i:s').'", "ADMIN", "NEW_OVERRIDE")';
+                                          "'.date('Y-m-d H:i:s').'", "'.$user_details.'", "NEW_OVERRIDE")';
                     $insert_oee_history_res = ExecuteIQuery($insert_oee_history, $iConRLM);
                 }
 
@@ -187,7 +187,7 @@
                             $insert_part_res = ExecuteIQuery($insert_part, $iConRLM);
                             $return_res = $insert_part_res;
 
-                            $insert_part_history = 'INSERT INTO BRAIN.OEE_OVERRIDE_PART_HIST VALUES ("'.$row['LAST_INSERT_ID()'].'", "'.$partnum.'", "'.date('Y-m-d H:i:s').'", "ADMIN", "NEW_OVERRIDE_PART")';
+                            $insert_part_history = 'INSERT INTO BRAIN.OEE_OVERRIDE_PART_HIST VALUES ("'.$row['LAST_INSERT_ID()'].'", "'.$partnum.'", "'.date('Y-m-d H:i:s').'", "'.$user_details.'", "NEW_OVERRIDE_PART")';
                             $insert_part_history_res = ExecuteIQuery($insert_part_history, $iConRLM);
                         }
                     }
