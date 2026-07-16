@@ -467,7 +467,7 @@
                     INNER JOIN BRAIN.HW_NONBOARD_REF REF ON PRR.REF_SETUP_ID = REF.REF_SETUP_ID AND HMS.HW_NM = REF.HW_NM
                     WHERE REF.HW_NM IN ("'.implode('","', $data).'") AND
                     HMS.HW_TYPE_HMS IN ("'.implode('","', $hw_type_arr).'")
-                    GROUP BY SITE_NUM, RES_AREA, HW_NM, HW_TYPE LIMIT 100';
+                    GROUP BY SITE_NUM, RES_AREA, HW_NM, HW_TYPE';
 
         $res_hw = ExecuteIQuery($get_hw, Open_ILink("MXHTAFOT01L"));
 
@@ -475,6 +475,18 @@
             array_push($result, $row);
             // $temp_arr['HW_TYPE'][] = $row['HW_TYPE'];
             // $temp_arr['HW_NM'][] = $row['HW_NM'];
+        }
+
+        $hw_type3_arr = GET_HW_FROM_TYPE_3($data);
+
+        foreach ($hw_type3_arr as $key => $hwt3) {
+            $result[] = [
+                'HW_NM' => $hwt3['HW_NM'],
+                'HW_TYPE' => $hwt3['HW_TYPE'],
+                'REQUIRED_QTY' => (double)$hwt3['CAPACITY'],
+                'SITE_NUM' => $hwt3['SITE_NUM'],
+                'RES_AREA' => $hwt3['RES_AREA']
+            ];
         }
 
         return $result;
