@@ -38,6 +38,9 @@
     elseif ($process == "GET_PRIMARY_SETUP") {
         print_r(json_encode(GET_PRIMARY_SETUP($iConRLM, $_POST['payload'])));
     }
+    elseif ($process == "GET_OEE_FOR_REPORT") {
+        print_r(json_encode(GET_OEE_FOR_REPORT($iConRLM)));
+    }
 
     mysqli_close($iConRLM);
 
@@ -206,6 +209,30 @@
         $get_primary = 'SELECT * FROM TEST.ADI_PRIMARY_SETUP WHERE MFG_PART_NUM IN ("'.implode('","', $data).'")';
         $get_primary_res = ExecuteIQuery($get_primary, $iConRLM);
         while($row = mysqli_fetch_assoc($get_primary_res)){
+            array_push($result, $row);
+        }
+        return $result;
+    }
+
+    function GET_OEE_FOR_REPORT($iConRLM){
+        $result = [];
+        $query = 'SELECT 
+            OM.SITE_NUM, 
+            OM.RES_AREA, 
+            OM.TESTER, 
+            OM.HANDLER, 
+            OM.TEMP_CLASS, 
+            OM.OEE_VAL, 
+            OP.MFG_PART_NUM, 
+            GROUP_CONCAT(
+                CONCAT(OMH.OEE_VAL, ">", OMH.CHANGE_DT, ">", OMH.CHANGE_USER, ">", OMH.CHANGE_TYPE) ORDER BY OMH.CHANGE_DT DESC SEPARATOR "|" 
+            ) AS DETAILS FROM BRAIN.OEE_OVERRIDE_MAIN OM
+            LEFT JOIN BRAIN.OEE_OVERRIDE_PART OP ON OM.OEEO_ID = OP.OEEO_ID
+            LEFT JOIN BRAIN.OEE_OVERRIDE_MAIN_HIST OMH ON OM.OEEO_ID = OMH.OEEO_ID
+            GROUP BY OM.OEEO_ID';
+        
+        $query_res = ExecuteIQuery($query, $iConRLM);
+        while($row = mysqli_fetch_assoc($query_res)){
             array_push($result, $row);
         }
         return $result;
