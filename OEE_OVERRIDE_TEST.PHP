@@ -216,25 +216,66 @@
 
     function GET_OEE_FOR_REPORT($iConRLM){
         $result = [];
+        $sub_res = [];
+        $sr_index = [];
         $query = 'SELECT 
+            OM.OEEO_ID,
             OM.SITE_NUM, 
             OM.RES_AREA, 
             OM.TESTER, 
             OM.HANDLER, 
             OM.TEMP_CLASS, 
             OM.OEE_VAL, 
-            OP.MFG_PART_NUM, 
-            GROUP_CONCAT(
-                CONCAT(OMH.OEE_VAL, ">", OMH.CHANGE_DT, ">", OMH.CHANGE_USER, ">", OMH.CHANGE_TYPE) ORDER BY OMH.CHANGE_DT DESC SEPARATOR "|" 
-            ) AS DETAILS FROM BRAIN.OEE_OVERRIDE_MAIN OM
+            OP.MFG_PART_NUM
+            -- GROUP_CONCAT(
+            --     DISTINCT(CONCAT(OMH.OEE_VAL, ">", OMH.CHANGE_DT, ">", OMH.CHANGE_USER, ">", OMH.CHANGE_TYPE)) ORDER BY OMH.CHANGE_DT ASC SEPARATOR "|" 
+            -- ) AS DETAILS 
+            FROM BRAIN.OEE_OVERRIDE_MAIN OM
             LEFT JOIN BRAIN.OEE_OVERRIDE_PART OP ON OM.OEEO_ID = OP.OEEO_ID
-            LEFT JOIN BRAIN.OEE_OVERRIDE_MAIN_HIST OMH ON OM.OEEO_ID = OMH.OEEO_ID
+            -- LEFT JOIN BRAIN.OEE_OVERRIDE_MAIN_HIST OMH ON OM.OEEO_ID = OMH.OEEO_ID
             GROUP BY OM.OEEO_ID';
         
         $query_res = ExecuteIQuery($query, $iConRLM);
         while($row = mysqli_fetch_assoc($query_res)){
             array_push($result, $row);
         }
+
+        $ids = array_map(function($item) {
+            return $item['OEEO_ID'];
+        }, $result);
+
+        //history log, decoupled from the main query above.
+        $history = 'SELECT OMH.*
+                    FROM BRAIN.OEE_OVERRIDE_MAIN_HIST OMH
+                    INNER JOIN (
+                        SELECT OEEO_ID, OEE_VAL, MIN(CHANGE_DT) AS oldest_datetime
+                        FROM BRAIN.OEE_OVERRIDE_MAIN_HIST
+                        WHERE OEEO_ID IN ("'.implode('","', $ids).'")
+                        GROUP BY OEEO_ID, OEE_VAL
+                    ) OTH
+                    ON OMH.OEEO_ID = OTH.OEEO_ID
+                    AND OMH.OEE_VAL = OTH.OEE_VAL
+                    AND OMH.CHANGE_DT = OTH.oldest_datetime
+                    ORDER BY OMH.CHANGE_DT ASC;';
+
+        $history_res = ExecuteIQuery($history, $iConRLM);
+        while($row = mysqli_fetch_assoc($history_res)){
+            array_push($sub_res, $row);
+        }
+
+        foreach ($sub_res as $srkey => $sub) {
+            $data = [$sub['OEE_VAL'], $sub['CHANGE_DT'], $sub['CHANGE_USER'], $sub['CHANGE_TYPE']];
+            $sr_index[$sub['OEEO_ID']][] = implode(">", $data);
+        }
+        
+        foreach ($result as &$res) {
+            $oeeo_id = $res['OEEO_ID'];
+
+            $res['LOGS'] = (isset($sr_index[$oeeo_id])) ? $sr_index[$oeeo_id] : [];
+        }
+
+        unset($res);
+
         return $result;
     }
 ?>
