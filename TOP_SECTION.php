@@ -55,13 +55,20 @@ $aryIO = array([
 
     #2025-10-03 RM changed to BRAIN_ADI_ALLDB_ALL
     $retrieve_data 			= BODS_JDA_ADI_STAGE_V2($iConRLM,$aryInput,$bolDebug);
+	#2025-11-18 RM V3. was dropping info when condensing with " or "
+    $retrieve_hardware 		= GET_HARDWARE_RECORD_V3($iConRLM, $retrieve_data);
+
+	$retrieve_data = array_filter($retrieve_data, function ($item) {
+		return $item['EFF_START_DT'] === null;
+	});
+	$retrieve_data = array_values($retrieve_data);
+
    	$retrieve_prio 			= ADD_SETUP_PRIO($iConRLM, $retrieve_data);
     $retrieve_prim_setup 	= GET_PRIMARY_SETUP($iConRLM, $aryInput);
     $retrieve_prim_pending 	= GET_PRIMARY_SETUP($iConRLM, null);
     $retrieve_prim_former 	= GET_PRIMARY_SETUP_FORMER($iConRLM, $retrieve_data);
     // $retrieve_prim_hardware = GET_PRIMARY_HARDWARE($aryInput);
-    #2025-11-18 RM V3. was dropping info when condensing with " or "
-    $retrieve_hardware 		= GET_HARDWARE_RECORD_V3($iConRLM, $retrieve_data);
+    
 	$retrieve_steps 		= GET_UNIQUE_RECORD($retrieve_data, "step");
 	// $retrieve_oee 			= GET_OEE($iConRLM, $aryInput);
 	$retrieve_oee_override 	= GET_OEE_OVERRIDE($iConRLM, $retrieve_data);
@@ -147,10 +154,11 @@ function BODS_JDA_ADI_STAGE_V2($iConRLM,$aryInput,$bolDebug=false) {
 			AAA.ATTR_SET_ID AS ATTR_ID,
 			AAA.HW_SET_ID,
 			AAA.RES_SET_ID,
-			AAA.ATOM_MASTER_ID
+			AAA.ATOM_MASTER_ID,
+			AAA.EFF_START_DT
         FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA
 		LEFT JOIN BODS_JDA_ADI_EXPORT.ATOM_MASTER AM ON AAA.ATOM_MASTER_ID = AM.AM_ID
-        WHERE AAA.MFG_PART_NUM IN ('".implode("','",$aryTemp)."') and EFF_START_DT is NULL";
+        WHERE AAA.MFG_PART_NUM IN ('".implode("','",$aryTemp)."')";
 	if($bolDebug === true) {
 		echo $strSQL."<BR>";
 	}
