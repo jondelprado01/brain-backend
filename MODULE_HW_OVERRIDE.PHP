@@ -650,8 +650,8 @@
                 // }
             }
             else{
-                
-                $query = 'INSERT INTO TEST.ADI_HW_OVERRIDE_TYPE_1 VALUES ("", "'.$dt[0].'", "'.strtoupper($dt[1]).'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[7].'", "'.$dt[8].'", "'.$dt[4].'", "'.$dt[5].'", "'.$curdate.'", "'.$user['emp_name'].'", "", "'.$dt[9].'")';
+                $site_val = (in_array($dt[10], ["ADGT", "ADPI"])) ? $dt[10] : $dt[11];
+                $query = 'INSERT INTO TEST.ADI_HW_OVERRIDE_TYPE_1 VALUES ("", "'.$dt[0].'", "'.strtoupper($dt[1]).'", "'.$dt[2].'", "'.$dt[3].'", "'.$dt[7].'", "'.$dt[8].'", "'.$dt[4].'", "'.$dt[5].'", "'.$curdate.'", "'.$user['emp_name'].'", "", "'.$dt[9].'", "'.$site_val.'")';
                 $result = ExecuteIQuery($query,$iConRLM);
 
                 $get_id = 'SELECT LAST_INSERT_ID()';
