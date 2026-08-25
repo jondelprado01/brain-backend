@@ -227,7 +227,7 @@ function SET_PRIMARY($iConRLM, $data, $user_details){
                 $result_to_alternate = ExecuteIQuery($ded_to_alternate,$iConRLM);
             }
             else{
-                $delete_query = "DELETE FROM TEST.ADI_PRIMARY_SETUP WHERE HASH IN ('".$explode[0]."') AND HW_SET_ID IN ('".$explode[1]."') AND ID IN ('".$explode[2]."') AND DED_ID = 0";
+                $delete_query = "DELETE FROM TEST.ADI_PRIMARY_SETUP WHERE HASH IN ('".$explode[0]."') AND HW_SET_ID IN ('".$explode[1]."') AND ID IN ('".$explode[2]."') AND (DED_ID = 0 OR DED_ID IS NULL)";
                 $delete_result = ExecuteIQuery($delete_query,$iConRLM);
             }
         }
