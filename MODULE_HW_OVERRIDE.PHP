@@ -108,7 +108,10 @@
         if ($data != null || $data != '') {
 
             if (gettype($data) == "string") {
-                $get_parts = 'SELECT DISTINCT MFG_PART_NUM, HW_SET_ID, SITE_NUM, RES_AREA FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL WHERE MFG_PART_NUM LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%" ORDER BY MFG_PART_NUM ASC LIMIT 10';
+                // $get_parts = 'SELECT DISTINCT MFG_PART_NUM, HW_SET_ID, SITE_NUM, RES_AREA FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL WHERE MFG_PART_NUM LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%" ORDER BY MFG_PART_NUM ASC LIMIT 10';
+                $get_parts = 'SELECT MFG_PART_NUM, GROUP_CONCAT(DISTINCT HW_SET_ID) AS HW_SET_ID, 
+                              GROUP_CONCAT(DISTINCT SITE_NUM) AS SITE_NUM, RES_AREA FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL WHERE MFG_PART_NUM LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%" 
+                              GROUP BY MFG_PART_NUM ORDER BY MFG_PART_NUM ASC LIMIT 10';
             }
             elseif (gettype($data) == "array") {
                 $trim_data = array();
@@ -121,7 +124,9 @@
 
             while($row = mysqli_fetch_assoc($res_parts)){
                 array_push($parts_arr, $row);
-                array_push($hw_set_id, mysqli_real_escape_string($iConRLM,$row['HW_SET_ID']));
+                foreach(explode(",", $row['HW_SET_ID']) as $exp_hws){
+                    array_push($hw_set_id, mysqli_real_escape_string($iConRLM,$exp_hws));
+                }
             }
         
             if (count($parts_arr) == 0) {
@@ -132,11 +137,19 @@
 
             $hw_type_arr = GET_HW_TYPES(1);
 
-            $get_raw_hw = 'SELECT DISTINCT HW_SET_ID, HW_TYPE, REPLACE(HW_NM,"_ZEROCAP","") HW_NM FROM BODS_JDA_ADI_EXPORT.hardware_set 
+            $get_raw_hw = 'SELECT GROUP_CONCAT(DISTINCT HW_SET_ID) AS HW_SET_ID, HW_TYPE, REPLACE(HW_NM,"_ZEROCAP","") HW_NM FROM (
+                            SELECT DISTINCT HW_SET_ID, HW_TYPE, REPLACE(HW_NM,"_ZEROCAP","") HW_NM FROM BODS_JDA_ADI_EXPORT.hardware_set 
                             WHERE HW_SET_ID IN ("'.implode('","', $hw_set_id).'") AND HW_TYPE IN ("'.implode('","', $hw_type_arr).'") AND HW_NM NOT LIKE "%FAKE"
                             UNION
                             SELECT DISTINCT HW_SET_ID, HW_TYPE, REPLACE(HW_NM,"_ZEROCAP","") HW_NM FROM BODS_JDA_ADI_EXPORT.hardware_alternates 
-                            WHERE HW_SET_ID IN ("'.implode('","', $hw_set_id).'") AND HW_TYPE IN ("'.implode('","', $hw_type_arr).'") AND HW_NM NOT LIKE "%FAKE" ORDER BY HW_TYPE, HW_NM';
+                            WHERE HW_SET_ID IN ("'.implode('","', $hw_set_id).'") AND HW_TYPE IN ("'.implode('","', $hw_type_arr).'") AND HW_NM NOT LIKE "%FAKE")
+                            AS T GROUP BY HW_NM ORDER BY HW_TYPE, HW_NM';
+
+            // $get_raw_hw = 'SELECT DISTINCT HW_SET_ID, HW_TYPE, REPLACE(HW_NM,"_ZEROCAP","") HW_NM FROM BODS_JDA_ADI_EXPORT.hardware_set 
+            //                 WHERE HW_SET_ID IN ("'.implode('","', $hw_set_id).'") AND HW_TYPE IN ("'.implode('","', $hw_type_arr).'") AND HW_NM NOT LIKE "%FAKE"
+            //                 UNION
+            //                 SELECT DISTINCT HW_SET_ID, HW_TYPE, REPLACE(HW_NM,"_ZEROCAP","") HW_NM FROM BODS_JDA_ADI_EXPORT.hardware_alternates 
+            //                 WHERE HW_SET_ID IN ("'.implode('","', $hw_set_id).'") AND HW_TYPE IN ("'.implode('","', $hw_type_arr).'") AND HW_NM NOT LIKE "%FAKE" ORDER BY HW_TYPE, HW_NM';
 
             $res_raw_hw = ExecuteIQuery($get_raw_hw,Open_ILink("MXHTAFOT01L"));
             
@@ -192,7 +205,7 @@
                 $p_site_num = $p['SITE_NUM'];
                 $p_res_area = $p['RES_AREA'];
                 foreach ($hw_raw_arr as $hwk => $hw) {
-                    if ($p_hw_set_id == $hw['HW_SET_ID']) {
+                    if (count(array_intersect(explode(',', $p_hw_set_id), explode(',', $hw['HW_SET_ID']))) > 0) {
                         if (array_key_exists('REQUIRED_QTY', $hw)) {
                             $res_arr[$p['MFG_PART_NUM']][] = [
                                 'HW_NM' => $hw['HW_NM'],
@@ -205,7 +218,7 @@
                     }
                 }
             }
-            
+
             return $res_arr;
         }
     }
