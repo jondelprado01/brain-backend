@@ -1432,6 +1432,7 @@ function SEARCH_V3_ADI_GET($iConRLM,$aryInput,$bolDebug=false) {
 	$aryResult = array();
 	$aryXA = array();
 		
+	#2025-10-15 RM removed leading wildcard as agreed
 	foreach($aryMap["FIELD_SOURCE"] as $strField => $strSource) {
 		switch ($strSource) {
 			case "AAA":
@@ -1439,7 +1440,7 @@ function SEARCH_V3_ADI_GET($iConRLM,$aryInput,$bolDebug=false) {
 				$strSQL = "
 					SELECT DISTINCT ".$strFieldQuery." AS VALUE
 					FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL
-					WHERE ".$strFieldQuery." LIKE '%".mysqli_real_escape_string($iConRLM,$strInput)."%'
+					WHERE ".$strFieldQuery." LIKE '".mysqli_real_escape_string($iConRLM,$strInput)."%'
 					ORDER BY ".$strFieldQuery;
 				break;
 			case "AAA_AM":
@@ -1448,7 +1449,7 @@ function SEARCH_V3_ADI_GET($iConRLM,$aryInput,$bolDebug=false) {
 					SELECT DISTINCT AM.".$strFieldQuery." AS VALUE
 					FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA
 					INNER JOIN BODS_JDA_ADI_EXPORT.ATOM_MASTER AM ON AAA.ATOM_MASTER_ID = AM.AM_ID
-					WHERE AM.".$strFieldQuery." LIKE '%".mysqli_real_escape_string($iConRLM,$strInput)."%'
+					WHERE AM.".$strFieldQuery." LIKE '".mysqli_real_escape_string($iConRLM,$strInput)."%'
 					ORDER BY AM.".$strFieldQuery;
 				break;
 		}
