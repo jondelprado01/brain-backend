@@ -336,6 +336,24 @@ if($bolOK === true) {
 			mysqli_close($iConRLM);
 
 			break;
+
+		case $strOutputType == "SEARCH_SAP_RTE_ID": 
+				$iConRLM = Open_ILink("localhost");
+	
+				try{
+					$aryData = SEARCH_SAP_RTE_ID($iConRLM,$aryInput,$bolDebug);
+	
+					$strStatus = "SUCCESS";
+					$strMessage = "";
+	
+				} catch (exception $e) {
+					$strStatus = "FAILURE";
+					$strMessage = $e->getMessage();
+				}
+
+			mysqli_close($iConRLM);
+
+			break;
 			
 		case $strOutputType == "SEARCH_V2_ADI": //NEW SEARCH API - SEARCH_V2 (JCDP)
 				$iConRLM = Open_ILink("localhost");
@@ -1312,7 +1330,7 @@ function GET_DETAILS($iConRLM,$aryInput,$bolDebug, $aryRequest=null){
 		$newInput = [];
 		$rawResult = [];
 		$to_search = [];
-		$inner_join_count = 0;
+		// $inner_join_count = 0;
 		$categories = ['ATOM_TESTER','ENGINEERING_TESTER','ATOM_HANDLER','ENGINEERING_HANDLER'];
 		$where_statement = "";
 		// $limiter = " LIMIT 0, 11";
@@ -1334,22 +1352,22 @@ function GET_DETAILS($iConRLM,$aryInput,$bolDebug, $aryRequest=null){
 			$to_match = (count($search) > 1) ? " IN ('".implode("','", $search)."')" : " = '".$search[0]."'";
 
 			if (in_array($key, $categories)) {
-				$inner_join_count++;
+				// $inner_join_count++;
 				switch ($key) {
 					case 'ATOM_TESTER':
-						$condition = "AM.TESTER_NEW".$to_match;
+						$condition = "AAA.TESTER".$to_match;
 						break;
 
 					case 'ENGINEERING_TESTER':
-						$condition = "AM.TESTER".$to_match;
+						$condition = "AAA.TESTER_ENG".$to_match;
 						break;
 
 					case 'ATOM_HANDLER':
-						$condition = "AM.HANDLER_NEW".$to_match;
+						$condition = "AAA.HANDLER".$to_match;
 						break;
 
 					case 'ENGINEERING_HANDLER':
-						$condition = "AM.HANDLER".$to_match;
+						$condition = "AAA.HANDLER_ENG".$to_match;
 						break;
 				}
 			}
@@ -1378,8 +1396,8 @@ function GET_DETAILS($iConRLM,$aryInput,$bolDebug, $aryRequest=null){
 			$where_statement .= $command.$condition.$operator;
 		}
 
-		$inner_join_stmt = ($inner_join_count > 0) ? "INNER JOIN BODS_JDA_STAGE.ATOM_MASTER AM ON AAA.AM_HASH = AM.AM_HASH " : "";
-		$query = "SELECT AAA.MFG_PART_NUM, AAA.GENERIC, AAA.RES_AREA FROM BODS_JDA_STAGE.ADI_ALLDB_ALL AAA ".$inner_join_stmt.$where_statement."GROUP BY AAA.MFG_PART_NUM";
+		// $inner_join_stmt = ($inner_join_count > 0) ? "INNER JOIN BODS_JDA_STAGE.ATOM_MASTER_UNUSED AM ON AAA.AM_HASH = AM.AM_HASH " : "";
+		$query = "SELECT AAA.MFG_PART_NUM, AAA.GENERIC, AAA.RES_AREA FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA ".$where_statement." GROUP BY AAA.MFG_PART_NUM LIMIT 50";
 		$RSMain = ExecuteIQuery($query,$iConRLM);
 		while ($LineMain = mysqli_fetch_assoc($RSMain)) {
 				array_push($newInput, $LineMain['MFG_PART_NUM']);
@@ -1521,6 +1539,33 @@ function SEARCH_V3_ADI_GET($iConRLM,$aryInput,$bolDebug=false) {
 		}
 	}
 		
+	return $result;
+}
+
+function SEARCH_SAP_RTE_ID($iConRLM,$aryInput,$bolDebug){
+	$result = [];
+	$strInput = [];
+	foreach (explode(",", $aryInput[0]) as $ai_val) {
+		array_push($strInput, mysqli_real_escape_string($iConRLM,$ai_val));
+	}
+	$query = 'SELECT MFG_PART_NUM, GROUP_CONCAT(DISTINCT CONCAT(SAP_RTE_ID, "||", SITE_NUM) ORDER BY SAP_RTE_ID SEPARATOR ",") AS SAP_RTE_ID
+				FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL 
+				where EFF_START_DT IS NULL AND MFG_PART_NUM IN ("'.implode('","', $strInput).'")
+				GROUP BY MFG_PART_NUM
+				HAVING COUNT(DISTINCT SAP_RTE_ID) > 0;';
+	$RSMain = ExecuteIQuery($query,$iConRLM);
+	while ($LineMain = mysqli_fetch_assoc($RSMain)) {
+		$result[$LineMain['MFG_PART_NUM']] = [];
+		foreach (explode(",", $LineMain['SAP_RTE_ID']) as $rte_val) {
+			$expl_val = explode("||", $rte_val);
+			$site_num_val = $expl_val[1];
+			$result[$LineMain['MFG_PART_NUM']][$site_num_val] = [];
+		}
+		foreach (explode(",", $LineMain['SAP_RTE_ID']) as $rte_val) {
+			$expl_val = explode("||", $rte_val);
+			array_push($result[$LineMain['MFG_PART_NUM']][$expl_val[1]], $expl_val[0]);
+		}
+	}
 	return $result;
 }
 

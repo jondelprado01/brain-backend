@@ -158,7 +158,7 @@ function BODS_JDA_ADI_STAGE_V2($iConRLM,$aryInput,$bolDebug=false) {
 			AAA.EFF_START_DT
         FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA
 		LEFT JOIN BODS_JDA_ADI_EXPORT.ATOM_MASTER AM ON AAA.ATOM_MASTER_ID = AM.AM_ID
-        WHERE AAA.MFG_PART_NUM IN ('".implode("','",$aryTemp)."')";
+        WHERE AAA.SAP_RTE_ID IN ('".implode("','",$aryTemp)."')";
 	if($bolDebug === true) {
 		echo $strSQL."<BR>";
 	}
@@ -213,7 +213,7 @@ function GET_PRIMARY_SETUP($iConRLM, $aryInput){
 	$hash_arr = array();
 	$temp_arr = array();
 	if(count($aryInput) > 0){
-		$condition = ($aryInput != null) ? 'WHERE MFG_PART_NUM IN ("'.implode('","', $aryInput).'")' : 'WHERE STATUS = "PENDING"';
+		$condition = ($aryInput != null) ? 'WHERE SAP_RTE_ID IN ("'.implode('","', $aryInput).'")' : 'WHERE STATUS = "PENDING"';
 		$query = 'SELECT * FROM TEST.ADI_PRIMARY_SETUP '.$condition.' ORDER BY CREATED_AT ASC';
 		$result = ExecuteIQuery($query,$iConRLM);
 	
@@ -252,7 +252,7 @@ function GET_PRIMARY_SETUP_FORMER($iConRLM, $aryInput){
 	
 	if (count($aryTemp) > 0) {
 		$query = "SELECT APS.MFG_PART_NUM, APS.HASH, APS.HW_SET_ID FROM TEST.ADI_PRIMARY_SETUP 
-					WHERE APS.MFG_PARTNUM IN (".implode(",", $aryInput).")
+					WHERE APS.SAP_RTE_ID IN (".implode(",", $aryInput).")
 					AND APS.STATE LIKE 'DELETED_%' ORDER BY DELETED_AT DESC";
 		$result = ExecuteIQuery($query,$iConRLM);
 		while($row = mysqli_fetch_assoc($result)){
@@ -808,7 +808,7 @@ function GET_UNPLANNABLE($iConRLM, $data){
 function GET_DEDICATION($iConRLM, $data){
 	$result = [];
 	$prio_result = [];
-	$get_dedication = 'SELECT * FROM TEST.ADI_PRIMARY_SETUP APS INNER JOIN TEST.ADI_DEDICATION ADN ON APS.DED_ID = ADN.DED_ID WHERE APS.MFG_PART_NUM IN ("'.implode('","', $data).'")';
+	$get_dedication = 'SELECT * FROM TEST.ADI_PRIMARY_SETUP APS INNER JOIN TEST.ADI_DEDICATION ADN ON APS.DED_ID = ADN.DED_ID WHERE APS.SAP_RTE_ID IN ("'.implode('","', $data).'")';
 	$get_dedication_res = ExecuteIQuery($get_dedication,$iConRLM);
 	while($row = mysqli_fetch_assoc($get_dedication_res)){
 		array_push($result, $row);
