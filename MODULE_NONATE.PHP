@@ -42,6 +42,10 @@
             print_r(json_encode(GET_BOARD_BURNIN($iConRLM, $aryRequest)));
             break;
 
+        case 'GET_BOARD_BURNIN_ALL':
+            print_r(json_encode(GET_BOARD_BURNIN_ALL($iConRLM)));
+            break;
+
         case 'ADD_BOARD_BURNIN':
             print_r(json_encode(ADD_BOARD_BURNIN($iConRLM, $_POST['payload'], ['emp_name' => 'Jonathan Del Prado'])));
             break;
@@ -52,6 +56,10 @@
 
         case 'GET_SOCKET':
             print_r(json_encode(GET_SOCKET($iConRLM, $aryRequest)));
+            break;
+
+        case 'GET_SOCKET_ALL':
+            print_r(json_encode(GET_SOCKET_ALL($iConRLM)));
             break;
 
         case 'ADD_SOCKET':
@@ -248,6 +256,16 @@
         return $result;
     }
 
+    function GET_BOARD_BURNIN_ALL($iConRLM){
+        $result = [];
+        $query = 'SELECT * FROM TEST.ADI_NONATE_TYPE_1 ORDER BY CREATED_AT DESC';
+        $res_query = ExecuteIQuery($query,$iConRLM);
+        while($row = mysqli_fetch_assoc($res_query)){
+            array_push($result, $row);
+        }
+        return $result;
+    }
+
     function ADD_BOARD_BURNIN($iConRLM, $data, $user){
         $curdate = date('Y-m-d H:i:s');
         $result = '';
@@ -338,6 +356,16 @@
         }
 
         $result = [];
+        $res_query = ExecuteIQuery($query,$iConRLM);
+        while($row = mysqli_fetch_assoc($res_query)){
+            array_push($result, $row);
+        }
+        return $result;
+    }
+
+    function GET_SOCKET_ALL($iConRLM){
+        $result = [];
+        $query = 'SELECT * FROM TEST.ADI_NONATE_TYPE_2 ORDER BY CREATED_AT DESC';
         $res_query = ExecuteIQuery($query,$iConRLM);
         while($row = mysqli_fetch_assoc($res_query)){
             array_push($result, $row);
