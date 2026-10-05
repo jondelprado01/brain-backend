@@ -43,6 +43,9 @@
         case 'SEARCH_NON_BOARD':
             print_r(json_encode(SEARCH_NON_BOARD($iConRLM, $_POST['payload'], $_POST['limit'])));
             break;
+        case 'UPDATE_HMS_COUNT':
+            print_r(json_encode(UPDATE_HMS_COUNT($iConRLM, $_POST['payload'])));
+            break;
         case 'GET_DUMMY_HW':
             print_r(json_encode(GET_DUMMY_HW($iConRLM, $aryRequest)));
             break;
@@ -538,6 +541,31 @@
         // }
 
         // return $result;
+    }
+    
+    function UPDATE_HMS_COUNT($iConRLM, $data){
+        $iConRLM = Open_ILink("MXHTAFOT01L");
+        $result = [];
+        $hw_type_arr = GET_HW_TYPES(2);
+        $get_nonboard = 'SELECT
+                        PRR.SITE_NUM,
+                        PRR.RES_AREA,
+                        REF.HW_NM,
+                        HMS.HW_TYPE_HMS,
+                        MIN(HMS.AVAIL_QTY) AVAIL_QTY,
+                        MIN(HMS.TOTAL_QTY) TOTAL_QTY,
+                        GROUP_CONCAT(DISTINCT REF.HW_TYPE_SUS ORDER BY HW_TYPE_SUS) HW_TYPE_SUS
+                        FROM BRAIN.HW_NONBOARD_HMS HMS
+                        INNER JOIN BRAIN.HW_NONBOARD_PRR PRR ON HMS.SITE_NUM = PRR.SITE_NUM AND HMS.RES_AREA = PRR.RES_AREA
+                        INNER JOIN BRAIN.HW_NONBOARD_REF REF ON PRR.REF_SETUP_ID = REF.REF_SETUP_ID AND HMS.HW_NM = REF.HW_NM
+                        WHERE HMS.HW_NM IN ("'.implode('","', $data).'") AND HMS.HW_TYPE_HMS NOT IN ("'.implode('","', $hw_type_arr).'")
+                        GROUP BY SITE_NUM, RES_AREA, HW_NB_HMS_ID';
+
+        $get_nonboard_res = ExecuteIQuery($get_nonboard,$iConRLM);
+        while($row = mysqli_fetch_assoc($get_nonboard_res)){
+            array_push($result, $row);
+        }
+        return $result;
     }
 
     function SEARCH_NON_BOARD($iConRLM, $data, $limit){
