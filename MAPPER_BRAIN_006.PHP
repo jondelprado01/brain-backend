@@ -2764,8 +2764,9 @@ function TPI_DATA_OVERRIDE_APPLY($iConRLM,$strSchema,$strTable,$strMFRPN,$strSRI
 					if(isset($aryMain[$strSN]["TESTER"][$strTester]["HANDLER"][$strHandler]["TEMP_CLASS"][$strTC])) {
 						foreach($aryMain[$strSN]["TESTER"][$strTester]["HANDLER"][$strHandler]["TEMP_CLASS"][$strTC]["TPD_ID"] as $intTPDID) {
 							if(!isset($aryUpdate[$intTPDID])) {
-								$aryUpdate[$intTPDID] = $decOEE;
+								$aryUpdate[$intTPDID] = [];
 							}
+							array_push($aryUpdate[$intTPDID], $decOEE);
 						}
 					}
 					break;
@@ -2773,8 +2774,9 @@ function TPI_DATA_OVERRIDE_APPLY($iConRLM,$strSchema,$strTable,$strMFRPN,$strSRI
 					if(isset($aryMain[$strSN]["TESTER"][$strTester]["HANDLER"][$strHandler])) {
 						foreach($aryMain[$strSN]["TESTER"][$strTester]["HANDLER"][$strHandler]["TPD_ID"] as $intTPDID) {
 							if(!isset($aryUpdate[$intTPDID])) {
-								$aryUpdate[$intTPDID] = $decOEE;
+								$aryUpdate[$intTPDID] = [];
 							}
+							array_push($aryUpdate[$intTPDID], $decOEE);
 						}
 					}
 					break;
@@ -2782,8 +2784,9 @@ function TPI_DATA_OVERRIDE_APPLY($iConRLM,$strSchema,$strTable,$strMFRPN,$strSRI
 					if(isset($aryMain[$strSN]["TESTER"][$strTester]["TEMP_CLASS"][$strTC])) {
 						foreach($aryMain[$strSN]["TESTER"][$strTester]["TEMP_CLASS"][$strTC]["TPD_ID"] as $intTPDID) {
 							if(!isset($aryUpdate[$intTPDID])) {
-								$aryUpdate[$intTPDID] = $decOEE;
+								$aryUpdate[$intTPDID] = [];
 							}
+							array_push($aryUpdate[$intTPDID], $decOEE);
 						}
 					}
 					break;
@@ -2791,8 +2794,9 @@ function TPI_DATA_OVERRIDE_APPLY($iConRLM,$strSchema,$strTable,$strMFRPN,$strSRI
 					if(isset($aryMain[$strSN]["TESTER"][$strTester])) {
 						foreach($aryMain[$strSN]["TESTER"][$strTester]["TPD_ID"] as $intTPDID) {
 							if(!isset($aryUpdate[$intTPDID])) {
-								$aryUpdate[$intTPDID] = $decOEE;
+								$aryUpdate[$intTPDID] = [];
 							}
+							array_push($aryUpdate[$intTPDID], $decOEE);
 						}
 					}
 					break;
@@ -2800,8 +2804,9 @@ function TPI_DATA_OVERRIDE_APPLY($iConRLM,$strSchema,$strTable,$strMFRPN,$strSRI
 					if(isset($aryMain[$strSN]["HANDLER"][$strHandler]["TEMP_CLASS"][$strTC])) {
 						foreach($aryMain[$strSN]["HANDLER"][$strHandler]["TEMP_CLASS"][$strTC]["TPD_ID"] as $intTPDID) {
 							if(!isset($aryUpdate[$intTPDID])) {
-								$aryUpdate[$intTPDID] = $decOEE;
+								$aryUpdate[$intTPDID] = [];
 							}
+							array_push($aryUpdate[$intTPDID], $decOEE);
 						}
 					}
 					break;
@@ -2809,20 +2814,23 @@ function TPI_DATA_OVERRIDE_APPLY($iConRLM,$strSchema,$strTable,$strMFRPN,$strSRI
 					if(isset($aryMain[$strSN]["HANDLER"][$strHandler]["TPD_ID"])) {
 						foreach($aryMain[$strSN]["HANDLER"][$strHandler]["TPD_ID"] as $intTPDID) {
 							if(!isset($aryUpdate[$intTPDID])) {
-								$aryUpdate[$intTPDID] = $decOEE;
+								$aryUpdate[$intTPDID] = [];
 							}
+							array_push($aryUpdate[$intTPDID], $decOEE);
 						}
 					}
 					break;
 			}
 		}
 	}
-
+	//jon - 10/12/2026: adjusted switch case logic, collects all applicable oee override values and then select lowest possible value.
+	//fix for timephase instance setups with outdated or mismatched oee overrides
+	//issue: (HANDTEST = 1, 3AXIS_OVEN_MIC_N-A = 0.75 both applicable oee for one partnum. "HANDTEST = 1" gets displayed in the ui instead of "3AXIS_OVEN_MIC_N-A = 0.75")
 
 
 	$aryMap["OEE_TPDID"] = array();
 	foreach($aryUpdate as $intTPDID => $decOEE) {
-		$strOEE = (string) round($decOEE,3);
+		$strOEE = (string) round(min($decOEE),3);
 		$aryMap["OEE_TPDID"][$strOEE][] = $intTPDID;
 	}
 
