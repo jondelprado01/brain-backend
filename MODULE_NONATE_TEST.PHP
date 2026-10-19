@@ -417,17 +417,29 @@
         $aryReturn = array();
             
         if ($data != null || $data != ''){
+            #2026-10-19 jon - made query dynamic to accept arrays, enabling auto-updates for HMS plannable counts in type 3 tables.
+            if (gettype($data) == "string") {
+                $get_hw_query = 'LIKE "'.mysqli_real_escape_string($iConRLM,$data).'%"';
+            }
+            elseif (gettype($data) == "array") {
+                $trim_data = array();
+                foreach($data as $dt) {
+                    $trim_data[] = mysqli_real_escape_string($iConRLM,$dt);
+                }
+                $get_hw_query = 'IN ("'.implode('","', $trim_data).'")';
+            }
+
             #2026-05-02 RM added bods_jda_stage.v_bi_attr as source for hw_names
             $strSQL = "
                 SELECT DISTINCT SITE_NUM, RES_AREA, HW_TYPE RES_TYPE, REPLACE(HW_NM,'_ZEROCAP','') RES_NM
                 FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA INNER JOIN BODS_JDA_ADI_EXPORT.HARDWARE_SET HWS ON AAA.HW_SET_ID = HWS.HW_SET_ID
-                WHERE HW_NM LIKE '".$data."%' AND HW_NM NOT LIKE '%FAKE' AND HW_TYPE = 'BURNIN_BOARD'
+                WHERE HW_NM ".$get_hw_query." AND HW_NM NOT LIKE '%FAKE' AND HW_TYPE = 'BURNIN_BOARD'
                 UNION 
                 SELECT DISTINCT SITE_NUM, RES_AREA, HW_TYPE, REPLACE(HW_NM,'_ZEROCAP','') FROM BODS_JDA_STAGE.BRAIN_ADI_ALLDB_ALL AAA INNER JOIN BODS_JDA_ADI_EXPORT.HARDWARE_ALTERNATES HWA ON AAA.HW_SET_ID = HWA.HW_SET_ID
-                WHERE HW_NM LIKE '".$data."%' AND HW_NM NOT LIKE '%FAKE' AND HW_TYPE = 'BURNIN_BOARD'
+                WHERE HW_NM ".$get_hw_query." AND HW_NM NOT LIKE '%FAKE' AND HW_TYPE = 'BURNIN_BOARD'
                 UNION
                 SELECT DISTINCT
-                SITE_NUM,PROCESS_AREA,CONCAT(PROCESS_AREA,'_BOARD'), BOARD_NAME FROM BODS_JDA_STAGE.V_BI_ATTR WHERE BOARD_NAME LIKE '".$data."%'";
+                SITE_NUM,PROCESS_AREA,CONCAT(PROCESS_AREA,'_BOARD'), BOARD_NAME FROM BODS_JDA_STAGE.V_BI_ATTR WHERE BOARD_NAME ".$get_hw_query."";
             #echo $strSQL."<BR>";
             $RSMain = ExecuteIQuery($strSQL,$iConRLM);
 
